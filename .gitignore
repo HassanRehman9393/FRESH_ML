@@ -1,0 +1,154 @@
+# FRESH ML Project .gitignore
+
+# Dataset files (too large for Git)
+*.jpg
+*.jpeg
+*.png
+*.bmp
+*.tiff
+*.tif
+
+# Raw dataset folders
+mangoes.v1i.yolov8-obb/
+mangoes.v2i.yolov8-obb/
+mango.v1i.yolov8-obb/
+Mango.v9i.yolov8-obb/
+deepfruits-mango-xs1as-goqi.v2i.yolov8-obb/
+archive/
+
+# Organized dataset folders
+data/unified/
+data/raw/
+data/processed/
+
+# Model files
+*.h5
+*.pt
+*.pth
+*.onnx
+*.tflite
+*.pb
+models/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+.env
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# Machine Learning
+# Tensorboard logs
+logs/
+runs/
+tb_logs/
+
+# Weights and Biases
+wandb/
+
+# MLflow
+mlruns/
+mlartifacts/
+
+# Experiment tracking
+experiments/
+checkpoints/
+outputs/
+
+# Data processing
+*.csv
+*.json
+*.parquet
+*.feather
+*.pickle
+*.pkl
+
+# IDE and Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Windows
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+*.cache
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Documentation builds
+docs/_build/
+site/
+
+# Configuration files with secrets
+config.ini
+secrets.yaml
+.secrets
+
+# Large training files
+*.tar
+*.tar.gz
+*.zip
+*.rar
+
+# YOLO specific
+runs/
+weights/
+*.weights
+
+# TensorFlow
+*.ckpt*
+saved_model/
+
+# PyTorch
+*.pth.tar
+
+# Conda
+.conda/
+.condarc
