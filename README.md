@@ -133,13 +133,6 @@ Based on the PRD requirements:
 ✅ **Multiple Sources:** Combined from 5 different YOLO datasets  
 ✅ **Proper Splits:** 70/15/15 train/validation/test distribution  
 
-### **Coverage**
-- **Lighting Conditions:** Various natural lighting
-- **Backgrounds:** Real orchard environments
-- **Angles:** Multiple viewing angles and distances
-- **Fruit Conditions:** Healthy and diseased specimens
-- **Ripeness Stages:** Complete maturity spectrum
-
 ## 🔧 Data Preprocessing
 
 Recommended preprocessing for training:
