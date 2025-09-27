@@ -1,326 +1,148 @@
-# FRESH ML - Multi-Fruit Dataset
+# FRESH ML - Unified Fruit Analysis System
 
-**Unified Multi-Fruit Dataset for Object Detection and Classification**
+**Comprehensive Multi-Fruit Dataset for Object Detection and Classification**
 
-This repository contains organized datasets for the FRESH ML project - a drone-based agricultural AI system for fruit detection, quality assessment, and classification across multiple fruit types.
+This repository contains organized datasets for the FRESH ML project - a drone-based agricultural AI system for fruit detection, quality assessment, and ripeness classification across multiple fruit types.
 
 ## 📊 Dataset Overview
 
-### **Total Dataset Size**
-- **Mango Object Detection:** 4,941 images with YOLO annotations
-- **Mango Classification:** 1,303 images across 5 ripeness classes
-- **Grapefruit Detection:** 1,520 images with YOLO annotations  
-- **Guava Detection:** 5,842 images (converted from classification)
-- **Orange Detection:** 7,224 images (converted from classification)
-- **Total Images: ~20,830 images across 4 fruit types**
+### **Unified Datasets**
+- **Multi-Fruit Detection:** 18,527 images with YOLO annotations (4 fruit classes)
+- **Multi-Fruit Classification:** 8,460 images across 16 ripeness/variety classes
+- **Total Images: 26,987 images across 4 fruit types**
 
-### **Dataset Splits**
-| Fruit Type | Train | Validation | Test | Total |
-|------------|-------|------------|------|-------|
-| **Mango Detection** | 3,458 | 741 | 742 | 4,941 |
-| **Mango Classification** | 909 | 196 | 198 | 1,303 |
-| **Grapefruit Detection** | 1,064 | 228 | 228 | 1,520 |
-| **Guava Detection** | 4,089 | 876 | 877 | 5,842 |
-| **Orange Detection** | 4,356 | 934 | 934 | 7,224 |
+### **Dataset Statistics**
+| Dataset Type | Train | Validation | Test | Total |
+|-------------|-------|------------|------|-------|
+| **Object Detection** | 12,967 | 2,779 | 2,781 | 18,527 |
+| **Classification** | 5,916 | 1,263 | 1,281 | 8,460 |
+| **Combined Total** | 18,883 | 4,042 | 4,062 | **26,987** |
 
-## 📁 Dataset Structure
+## 📁 Unified Dataset Structure
 
 ```
 data/unified/
-├── mango/
-│   ├── object_detection/          # YOLO Object Detection Dataset
-│   │   ├── train/
-│   │   │   ├── images/           # 3,458 training images
-│   │   │   └── labels/           # YOLO format annotations (.txt)
-│   │   ├── val/
-│   │   │   ├── images/           # 741 validation images  
-│   │   │   └── labels/           # YOLO format annotations (.txt)
-│   │   ├── test/
-│   │   │   ├── images/           # 742 test images
-│   │   │   └── labels/           # YOLO format annotations (.txt)
-│   │   └── yolo_config.yaml     # YOLO configuration file
-│   └── classification/           # Ripeness Classification Dataset
-│       ├── train/               # 909 training images (70%)
-│       │   ├── ripe/            # 164 images
-│       │   ├── overripe/        # 81 images  
-│       │   ├── underripe/       # 166 images
-│       │   ├── partially_ripe/  # 166 images
-│       │   └── unripe/          # 166 images
-│       ├── val/                 # 196 validation images (15%)
-│       │   ├── ripe/            # 35 images
-│       │   ├── overripe/        # 17 images
-│       │   ├── underripe/       # 36 images
-│       │   ├── partially_ripe/  # 36 images
-│       │   └── unripe/          # 36 images
-│       └── test/                # 198 test images (15%)
-│           ├── ripe/            # 36 images
-│           ├── overripe/        # 18 images
-│           ├── underripe/       # 36 images
-│           ├── partially_ripe/  # 36 images
-│           └── unripe/          # 36 images
-├── grapefruit/
-│   └── object_detection/
-│       ├── train/
-│       │   ├── images/          # 1,064 training images
-│       │   └── labels/          # YOLO format annotations
-│       ├── val/
-│       │   ├── images/          # 228 validation images
-│       │   └── labels/          # YOLO format annotations
-│       ├── test/
-│       │   ├── images/          # 228 test images
-│       │   └── labels/          # YOLO format annotations
-│       └── yolo_config.yaml
-├── guava/
-│   └── object_detection/
-│       ├── train/
-│       │   ├── images/          # 4,089 training images
-│       │   └── labels/          # YOLO format annotations
-│       ├── val/
-│       │   ├── images/          # 876 validation images
-│       │   └── labels/          # YOLO format annotations
-│       ├── test/
-│       │   ├── images/          # 877 test images
-│       │   └── labels/          # YOLO format annotations
-│       └── yolo_config.yaml
-└── orange/
-    └── object_detection/
-        ├── train/
-        │   ├── images/          # 4,356 training images
-        │   └── labels/          # YOLO format annotations
-        ├── val/
-        │   ├── images/          # 934 validation images
-        │   └── labels/          # YOLO format annotations
-        ├── test/
-        │   ├── images/          # 934 test images
-        │   └── labels/          # YOLO format annotations
-        └── yolo_config.yaml
+├── multi_fruit_detection/           # 4-Class Object Detection (18,527 images)
+│   ├── train/                       # 12,967 training images
+│   │   ├── images/                  # Training images
+│   │   └── labels/                  # YOLO format annotations (.txt)
+│   ├── val/                         # 2,779 validation images
+│   │   ├── images/                  # Validation images
+│   │   └── labels/                  # YOLO format annotations (.txt)
+│   ├── test/                        # 2,781 test images
+│   │   ├── images/                  # Test images
+│   │   └── labels/                  # YOLO format annotations (.txt)
+│   └── dataset.yaml                 # YOLO configuration file
+├── fruit_classification/            # 16-Class Classification (8,460 images)
+│   ├── train/                       # 5,916 training images
+│   │   ├── mango_unripe/            # 166 images (class 0)
+│   │   ├── mango_early_ripe/        # 166 images (class 1)
+│   │   ├── mango_partially_ripe/    # 166 images (class 2)
+│   │   ├── mango_ripe/              # 164 images (class 3)
+│   │   ├── mango_rotten/            # 81 images (class 4)
+│   │   ├── orange_unripe/           # 560 images (class 5)
+│   │   ├── orange_ripe/             # 561 images (class 6)
+│   │   ├── orange_rotten/           # 560 images (class 7)
+│   │   ├── orange_general/          # 335 images (class 8)
+│   │   ├── guava_unripe/            # 641 images (class 9)
+│   │   ├── guava_ripe/              # 713 images (class 10)
+│   │   ├── guava_overripe/          # 209 images (class 11)
+│   │   ├── guava_rotten/            # 564 images (class 12)
+│   │   ├── guava_general/           # 343 images (class 13)
+│   │   ├── grapefruit_pink/         # 343 images (class 14)
+│   │   └── grapefruit_white/        # 344 images (class 15)
+│   ├── val/                         # 1,263 validation images (15%)
+│   ├── test/                        # 1,281 test images (15%)
+│   └── dataset.yaml                 # Classification configuration
+└── mango_classification/            # Original Mango-Only Classification
+    ├── train/                       # Original mango classification data
+    ├── validation/                  # (kept for reference)
+    ├── test/
+    └── config.yaml
 ```
 
-## 🎯 Object Detection Classes
+## 🎯 Class Definitions
 
-### **Mango Ripeness Classes (Classification)**
-1. **Ripe** - Perfect eating condition, golden-yellow color
-2. **Overripe** - Past optimal ripeness, very soft texture
-3. **Underripe** - Early ripening stage, mixed green-yellow
-4. **Partially Ripe** - Mid-ripening stage, yellow-orange color
-5. **Unripe** - Green mangoes, firm texture
+### **Object Detection Classes (4 Classes)**
+| Class ID | Class Name | Description |
+|----------|------------|-------------|
+| 0 | mango | Mango fruit detection |
+| 1 | grapefruit | Grapefruit detection |
+| 2 | guava | Guava fruit detection |
+| 3 | orange | Orange fruit detection |
 
-### **Fruit Detection Classes (Object Detection)**
-- **Mango** - General mango fruit detection
-- **Grapefruit** - Citrus fruit detection  
-- **Guava** - Tropical guava fruit detection
-- **Orange** - Orange citrus fruit detection
-
-The classification dataset includes 5 distinct ripeness stages:
+### **Classification Classes (16 Classes)**
+| Class ID | Class Name | Category | Description |
+|----------|------------|----------|-------------|
+| 0 | mango_unripe | Mango Ripeness | Green mangoes, firm texture |
+| 1 | mango_early_ripe | Mango Ripeness | Early ripening stage, mixed green-yellow |
+| 2 | mango_partially_ripe | Mango Ripeness | Mid-ripening stage, yellow-orange |
+| 3 | mango_ripe | Mango Ripeness | Perfect eating condition, golden-yellow |
+| 4 | mango_rotten | Mango Ripeness | Overripe/rotten condition |
+| 5 | orange_unripe | Orange Ripeness | Unripe oranges |
+| 6 | orange_ripe | Orange Ripeness | Ripe oranges |
+| 7 | orange_rotten | Orange Ripeness | Rotten oranges |
+| 8 | orange_general | Orange Ripeness | General oranges (no ripeness info) |
+| 9 | guava_unripe | Guava Ripeness | Unripe guavas |
+| 10 | guava_ripe | Guava Ripeness | Ripe guavas |
+| 11 | guava_overripe | Guava Ripeness | Overripe guavas |
+| 12 | guava_rotten | Guava Ripeness | Rotten guavas |
+| 13 | guava_general | Guava Ripeness | General guavas (no ripeness info) |
+| 14 | grapefruit_pink | Grapefruit Variety | Pink grapefruit variety |
+| 15 | grapefruit_white | Grapefruit Variety | White grapefruit variety |
 ## 📋 Data Specifications
 
 ### **Object Detection Format**
 - **Format:** YOLO v8 compatible
-- **Image Size:** Variable (will be resized to 640x640 for training)
+- **Image Size:** Variable (resized to 640x640 for training)
 - **Annotation Format:** `.txt` files with normalized coordinates
-- **Classes:** 
-  - Mango: 1 class (mango)
-  - Grapefruit: 1 class (grapefruit)
-  - Guava: 1 class (guava) 
-  - Orange: 1 class (orange)
 - **Label Format:** `class_id center_x center_y width height` (normalized 0-1)
+- **Classes:** 4 fruit types (mango=0, grapefruit=1, guava=2, orange=3)
 
-### **Classification Format (Mango Only)**
-- **Format:** Organized folder structure
-- **Image Size:** Variable (will be resized to 224x224 for training)
-- **Classes:** 5 ripeness classes
-- **Naming Convention:** `{class}_{split}_{index:04d}.jpg`
+### **Classification Format**
+- **Format:** Organized folder structure by class
+- **Image Size:** Variable (resized to 224x224 for training)
+- **Classes:** 16 classes (ripeness levels and varieties)
+- **Naming Convention:** `{class}_{split}_{index:05d}.{ext}`
+- **Splits:** 70% train / 15% validation / 15% test
 
-## 🚀 Usage Examples
+## 🚀 Quick Start
 
-### **Multi-Fruit Object Detection Training**
+### **Object Detection Training**
 ```python
 from ultralytics import YOLO
 
-# Train on all fruits
-fruits = ['mango', 'grapefruit', 'guava', 'orange']
-models = {}
-
-for fruit in fruits:
-    print(f"Training {fruit} detection model...")
-    model = YOLO('yolov8n.pt')  # or yolov8s.pt, yolov8m.pt
-    model.train(
-        data=f'data/unified/{fruit}/object_detection/yolo_config.yaml',
-        epochs=100,
-        imgsz=640,
-        batch=16,
-        name=f'{fruit}_detection'
-    )
-    models[fruit] = model
-
-# Validate models
-for fruit, model in models.items():
-    results = model.val(data=f'data/unified/{fruit}/object_detection/yolo_config.yaml')
-    print(f"{fruit} mAP@0.5: {results.box.map50}")
+# Train unified 4-class detection model
+model = YOLO('yolov8n.pt')
+model.train(
+    data='data/unified/multi_fruit_detection/dataset.yaml',
+    epochs=100,
+    imgsz=640,
+    batch=16
+)
 ```
 
-### **Mango Classification Training**
+### **Classification Training**
 ```python
-# YOLO v8 training
-from ultralytics import YOLO
-
-model = YOLO('yolov8n.pt')
-results = model.train(
-    data='data/unified/mango_detection/data.yaml',
-### **Mango Classification Training**
-```python
-# TensorFlow/Keras training
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-
-train_datagen = ImageDataGenerator(rescale=1./255)
-train_generator = train_datagen.flow_from_directory(
-    'data/unified/mango/classification/train',
-    target_size=(224, 224),
-    batch_size=32,
-    class_mode='categorical'
-)
-
-val_generator = train_datagen.flow_from_directory(
-    'data/unified/mango/classification/val', 
-    target_size=(224, 224),
-    batch_size=32,
-    class_mode='categorical'
-)
+# Use PyTorch/TensorFlow for 16-class classification
+# Dataset ready at: data/unified/fruit_classification/
+# Training script: train_multi_fruit_yolo.py
 ```
 
 ## 📈 Performance Targets
 
-Based on the PRD requirements:
-
-### **Multi-Fruit Object Detection**
-- **Target mAP:** >95% per fruit type
+- **Detection mAP:** >95% (4 fruit classes)
+- **Classification Accuracy:** >95% (16 classes)  
 - **Inference Time:** <2 seconds per image
-- **Model Size:** <100MB per fruit model
-- **Combined Model:** Multi-class detection across all 4 fruit types
 
-### **Mango Classification**
-- **Target Accuracy:** >95%
-- **Inference Time:** <1 second per image
-- **Classes:** 5 ripeness stages
+## � Files
 
-## 📊 Dataset Quality
-
-### **Strengths**
-✅ **Large Volume:** 20,830+ total images across all fruit types  
-✅ **Multi-Fruit Coverage:** Comprehensive datasets for 4 different fruits  
-✅ **Balanced Distribution:** Proper train/validation/test splits (70/15/15)  
-✅ **Real Field Data:** Authentic orchard and agricultural conditions  
-✅ **Multiple Sources:** Combined from 8+ different datasets (YOLO & classification)  
-✅ **Format Consistency:** All datasets standardized to YOLO format  
-✅ **Rich Annotations:** Quality bounding box labels and class information  
-
-## 🔧 Data Preprocessing
-
-Recommended preprocessing for training:
-
-### **Multi-Fruit Object Detection**
-```python
-# Image augmentation for YOLO training
-augmentations = [
-    {'mosaic': 1.0},
-    {'mixup': 0.1},
-    {'hsv_h': 0.015},
-    {'hsv_s': 0.7},
-    {'hsv_v': 0.4},
-    {'degrees': 0.0},
-    {'translate': 0.1},
-    {'scale': 0.5},
-    {'shear': 0.0},
-    {'perspective': 0.0},
-    {'flipud': 0.0},
-    {'fliplr': 0.5}
-]
-
-# Individual fruit model training
-fruits = ['mango', 'grapefruit', 'guava', 'orange']
-for fruit in fruits:
-    # Each fruit has its own YOLO config file
-    config_path = f'data/unified/{fruit}/object_detection/yolo_config.yaml'
-```
-
-### **Mango Classification**
-```python
-# Image augmentation for classification
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-
-augmentation = ImageDataGenerator(
-    rotation_range=20,
-    width_shift_range=0.2,
-    height_shift_range=0.2,
-    shear_range=0.2,
-    zoom_range=0.2,
-    horizontal_flip=True,
-    brightness_range=[0.8, 1.2],
-    fill_mode='nearest'
-)
-```
-
-## 🎯 Next Steps
-
-1. **Multi-Fruit Detection:** Train separate YOLO models for each fruit type
-2. **Combined Detection:** Explore multi-class detection across all fruits  
-3. **Mango Classification:** Train ripeness classification model
-4. **Pipeline Integration:** Combine detection + classification for mangoes
-5. **Validation:** Test on real drone-captured images across all fruit types
-6. **Model Optimization:** Quantization and optimization for edge deployment
-7. **Performance Benchmarking:** Validate against PRD requirements
-
-## 📝 Dataset Statistics Summary
-
-### **Image Distribution by Fruit Type**
-| Fruit Type | Detection Images | Classification Images | Total Images |
-|------------|------------------|----------------------|--------------|
-| **Mango** | 4,941 | 1,303 | **6,244** |
-| **Grapefruit** | 1,520 | - | **1,520** |
-| **Guava** | 5,842 | - | **5,842** |
-| **Orange** | 7,224 | - | **7,224** |
-| **TOTAL** | **19,527** | **1,303** | **20,830** |
-
-### **Source Dataset Breakdown**
-#### Mango Detection Sources:
-- mangoes.v1i.yolov8-obb
-- mangoes.v2i.yolov8-obb  
-- mango.v1i.yolov8-obb
-- Mango.v9i.yolov8-obb
-- deepfruits-mango-xs1as-goqi.v2i.yolov8-obb
-
-#### Other Fruit Sources:
-- Grapefruit: Fresh and Rotten Fruits dataset (converted from classification)
-- Guava: Fresh and Rotten Fruits dataset (converted from classification)  
-- Orange: Fruits dataset (converted from classification)
-
-### **Mango Classification Balance**
-| Class | Train | Val | Test | Total | Percentage |
-|-------|-------|-----|------|-------|------------|
-| Ripe | 164 | 35 | 36 | 235 | 18.0% |
-| Overripe | 81 | 17 | 18 | 116 | 8.9% |
-| Underripe | 166 | 36 | 36 | 238 | 18.3% |
-| Partially Ripe | 166 | 36 | 36 | 238 | 18.3% |
-| Unripe | 166 | 36 | 36 | 238 | 18.3% |
-| **TOTAL** | **909** | **196** | **198** | **1,303** | **100%** |
+- `train_multi_fruit_yolo.py` - YOLO detection training script
+- `create_unified_classification_dataset.py` - Dataset organization script
+- `TRAINING_GUIDE.md` - Training instructions
+- `requirements.txt` - Python dependencies
 
 ---
 
-**Dataset Ready for Training!** 🚀  
-*All datasets are properly organized, labeled, and split for immediate use in YOLO v8 training and TensorFlow/Keras classification.*
-
-For questions or support, please refer to the FRESH ML PRD document or contact the development team.
-| Unripe | 166 | 36 | 36 | 238 | 18.3% |
-| Rotten | 81 | 17 | 18 | 116 | 8.9% |
-
-**Note:** Rotten class has fewer samples - consider data augmentation or synthetic generation for better balance.
-
-## 🏷️ License and Usage
-
-This dataset is organized for the FRESH ML agricultural AI project. Ensure compliance with original dataset licenses when using for research or commercial purposes.
-
----
-
-**Project:** FRESH ML - Agricultural AI System  
-**Version:** 1.0  
-**Last Updated:** September 2025
+**FRESH ML - Agricultural AI System**  
+*Unified datasets ready for immediate training*
