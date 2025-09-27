@@ -67,11 +67,32 @@ python train_multi_fruit_yolo.py
 - **Target:** >95% mAP@0.5
 - **Results:** `runs/detect/multi_fruit_detection_v1/`
 
+**⏱️ Training Time:**
+- **Local GPU:** ~2-3 hours (RTX 3060/4060)
+- **Google Colab (T4):** ~1.5-2 hours (faster GPU)
+- **Google Colab Pro (V100/A100):** ~45-60 minutes (premium GPU)
+- **Without GPU:** ~12-15 hours (CPU only)
+
 ### **2. Train Multi-Class Classification**
-**Dataset ready at:** `data/unified/fruit_classification/`
-- **Classes:** 16 (ripeness levels + varieties)
+```bash
+python train_fruit_classification.py
+```
+
+**Configuration:**
+- **Model:** ResNet50 with transfer learning
+- **Image Size:** 224x224
+- **Batch Size:** 32
+- **Epochs:** 50 (with early stopping)
+- **Learning Rate:** 0.001 with StepLR scheduler
+- **Data Augmentation:** Rotation, flip, color jitter, affine transforms
 - **Target:** >95% accuracy
-- **Method:** PyTorch/TensorFlow (user implementation)
+- **Results:** `best_fruit_classification_model.pth` and `fruit_classification_final.pth`
+
+**⏱️ Training Time:**
+- **Local GPU:** ~1-2 hours (RTX 3060/4060)
+- **Google Colab (T4):** ~45-60 minutes (faster GPU)
+- **Google Colab Pro (V100/A100):** ~25-35 minutes (premium GPU)
+- **Without GPU:** ~8-10 hours (CPU only)
 
 ---
 
@@ -91,11 +112,49 @@ FRESH_ML/
 │   ├── multi_fruit_detection/         # 18,527 YOLO detection images
 │   ├── fruit_classification/          # 8,460 classification images
 │   └── mango_classification/          # Original mango data (reference)
-├── train_multi_fruit_yolo.py         # YOLO detection training
+├── train_multi_fruit_yolo.py         # YOLO detection training (single file)
+├── train_fruit_classification.py     # CNN classification training (single file)
 ├── create_unified_classification_dataset.py  # Dataset creation script
 ├── requirements.txt                   # Dependencies
+├── README.md                          # Project overview
 └── TRAINING_GUIDE.md                 # This guide
 ```
+
+---
+
+## 📦 **Model Outputs**
+
+### **Detection Model Outputs:**
+- `runs/detect/multi_fruit_detection_v1/weights/best.pt` - Best YOLO model
+- `runs/detect/multi_fruit_detection_v1/weights/last.pt` - Final YOLO model
+- Training metrics and validation plots
+
+### **Classification Model Outputs:**
+- `best_fruit_classification_model.pth` - Best classification model
+- `fruit_classification_final.pth` - Final model with metadata
+- `confusion_matrix.png` - Classification performance visualization
+- `training_history.png` - Training/validation curves
+
+---
+
+## 🔗 **Next Steps: Model Integration**
+
+After both models are trained:
+
+1. **Create Combined Pipeline**
+   - YOLO detects fruit locations
+   - CNN classifies each detected fruit
+   - Combine results for complete analysis
+
+2. **Model Deployment**
+   - Package both models together
+   - Create inference pipeline
+   - Optimize for real-time performance
+
+3. **Performance Testing**
+   - End-to-end accuracy validation
+   - Speed benchmarking
+   - Mobile deployment preparation
 
 ---
 
@@ -104,6 +163,6 @@ FRESH_ML/
 **Training Complete When:**
 - [ ] YOLO Detection mAP@0.5 > 95%
 - [ ] Classification Accuracy > 95%
-- [ ] Models ready for deployment
+- [ ] Models ready for pipeline integration
 
 **Total Training Data: 26,987 images**

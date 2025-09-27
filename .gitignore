@@ -63,9 +63,7 @@ ENV/
 env/
 .env
 
-# Jupyter Notebook
-.ipynb_checkpoints
-*.ipynb
+
 
 # Machine Learning
 # Tensorboard logs
