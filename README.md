@@ -2,7 +2,30 @@
 
 **Comprehensive Multi-Fruit Dataset for Object Detection and Classification**
 
-This repository contains organized datasets for the FRESH ML project - a drone-based agricultural AI system for fruit detection, quality assessment, and ripeness classification across multiple fruit types.
+This repository contains organized datasets, trained models, and notebooks for the FRESH ML project - a drone-based agricultural AI system for fruit detection, quality assessment, and ripeness classification across multiple fruit types.
+
+## 🏗️ **Repository Structure**
+
+```
+FRESH_ML/
+├── 📁 models/                       # Production-ready trained models
+│   ├── classification_best.pth     # Best fruit classification model (94MB)
+│   └── yolo_detection_best.pt      # Best YOLO object detection model (6MB)
+├── 📁 notebooks/                   # Jupyter notebooks for training & analysis
+│   ├── classification_training.ipynb
+│   ├── yolo_detection_training.ipynb
+│   └── yolo_detection_training_kaggle.ipynb
+├── 📁 scripts/                     # Python training scripts
+│   ├── train_fruit_classification.py
+│   └── train_multi_fruit_yolo.py
+├── 📁 data/                        # Raw datasets (preserved structure)
+│   └── unified/                    # Multi-fruit datasets
+├── 📁 archive/                     # Old models, results, and backups
+│   ├── fruit_classification_final.pth
+│   ├── yolo_training_results/
+│   └── yolo_training_results.zip
+└── 📄 Documentation files          # README, PRD, guides
+```
 
 ## 📊 Dataset Overview
 
