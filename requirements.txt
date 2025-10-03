@@ -23,8 +23,18 @@ seaborn>=0.12.0             # Statistical data visualization
 plotly>=5.15.0              # Interactive plots
 tqdm>=4.65.0                # Progress bars
 
+# API Framework (for ML Pipeline)
+fastapi>=0.100.0            # Fast API framework for ML endpoints
+uvicorn>=0.22.0             # ASGI server for FastAPI
+python-multipart>=0.0.6     # File upload support
+
+# Additional Libraries
+scikit-image>=0.20.0        # Advanced image processing
+pydantic>=2.0.0             # Data validation
+
 # Configuration & Utilities
 PyYAML>=6.0                 # YAML configuration files
+python-dotenv>=1.0.0        # Environment variables
 pathlib                     # Path operations (built-in)
 shutil                      # File operations (built-in)
 json                        # JSON handling (built-in)
