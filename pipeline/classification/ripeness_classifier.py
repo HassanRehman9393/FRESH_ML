@@ -124,12 +124,13 @@ class RipenessClassifier:
             raise
     
     def _create_model_architecture(self):
-        """Create the model architecture (ResNet18 with 16 classes)"""
+        """Create the model architecture (ResNet50 with 16 classes)"""
         try:
             import torchvision.models as models
             
-            # Create ResNet18 model with 16 output classes
-            model = models.resnet18(pretrained=False)
+            # Create ResNet50 model with 16 output classes
+            # Based on the error, the saved model is ResNet50 architecture
+            model = models.resnet50(pretrained=False)
             model.fc = nn.Linear(model.fc.in_features, 16)  # 16 classes
             
             return model

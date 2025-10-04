@@ -87,13 +87,15 @@ class FreshMLPredictor:
     
     def predict(self, 
                 image: Union[str, np.ndarray, Image.Image],
-                return_visualization: bool = False) -> Dict[str, Any]:
+                return_visualization: bool = False,
+                confidence_threshold: Optional[float] = None) -> Dict[str, Any]:
         """
         Predict fruits in image with comprehensive analysis
         
         Args:
             image: Input image (file path, numpy array, or PIL Image)
             return_visualization: Whether to return annotated image
+            confidence_threshold: Custom confidence threshold (overrides default)
             
         Returns:
             Dictionary containing detection and classification results
@@ -105,9 +107,19 @@ class FreshMLPredictor:
             logger.info("Processing input image...")
             processed_image = self.image_processor.load_and_preprocess(image)
             
-            # Step 2: Run YOLO detection
+            # Step 2: Set custom confidence threshold if provided
+            original_confidence = None
+            if confidence_threshold is not None:
+                original_confidence = self.yolo_detector.confidence_threshold
+                self.yolo_detector.confidence_threshold = confidence_threshold
+            
+            # Step 3: Run YOLO detection
             logger.info("Running fruit detection...")
             detections = self.yolo_detector.detect(processed_image)
+            
+            # Step 4: Restore original confidence threshold if it was changed
+            if original_confidence is not None:
+                self.yolo_detector.confidence_threshold = original_confidence
             
             if not detections:
                 logger.info("No fruits detected in image")
@@ -148,7 +160,7 @@ class FreshMLPredictor:
                 )
                 final_results['annotated_image'] = annotated_image
             
-            logger.info(f"Pipeline completed in {final_results['processing_time']:.2f}s")
+            logger.info(f"Pipeline completed in {final_results['processing_time']}")
             return final_results
             
         except Exception as e:
@@ -163,9 +175,17 @@ class FreshMLPredictor:
         """Format result when no fruits are detected"""
         return {
             'success': True,
+            'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
             'total_fruits': 0,
             'fruits': [],
             'processing_time': f"{processing_time:.2f}s",
+            'summary': {
+                'analysis_quality': 'no_detection',
+                'average_confidence': 0.0,
+                'high_quality_detections': 0,
+                'fruit_type_distribution': {},
+                'ripeness_distribution': {}
+            },
             'message': 'No fruits detected in the image'
         }
     

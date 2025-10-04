@@ -8,7 +8,7 @@ image processing parameters, and output formatting options.
 
 import os
 from pathlib import Path
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Tuple, Dict, Any
 
 @dataclass
@@ -25,18 +25,18 @@ class PipelineConfig:
     CONFIDENCE_THRESHOLD: float = 0.5
     IOU_THRESHOLD: float = 0.45
     
-    # Fruit classes
-    FRUIT_CLASSES: List[str] = ["mango", "orange", "guava", "grapefruit"]
-    RIPENESS_CLASSES: List[str] = [
+    # Fruit classes - using default_factory to avoid mutable default
+    FRUIT_CLASSES: List[str] = field(default_factory=lambda: ["mango", "orange", "guava", "grapefruit"])
+    RIPENESS_CLASSES: List[str] = field(default_factory=lambda: [
         "mango_unripe", "mango_early_ripe", "mango_partially_ripe", "mango_ripe", "mango_rotten",
         "orange_unripe", "orange_ripe", "orange_rotten", "orange_general",
         "guava_unripe", "guava_ripe", "guava_overripe", "guava_rotten",
         "grapefruit_unripe", "grapefruit_ripe", "grapefruit_overripe", "grapefruit_rotten"
-    ]
+    ])
     
     # Processing parameters
     MAX_IMAGE_SIZE: int = 10 * 1024 * 1024  # 10MB
-    SUPPORTED_FORMATS: List[str] = ['.jpg', '.jpeg', '.png', '.bmp']
+    SUPPORTED_FORMATS: List[str] = field(default_factory=lambda: ['.jpg', '.jpeg', '.png', '.bmp'])
     
     # Output configuration
     INCLUDE_VISUALIZATION: bool = False
