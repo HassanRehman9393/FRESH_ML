@@ -1,0 +1,39 @@
+# Reduce Docker build context size
+.git/
+.gitignore
+.env
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.pytest_cache/
+
+# Data and models (not needed in container)
+data/
+models/
+models_cache/
+archive/
+notebooks/
+test_images/
+
+# Documentation and development files
+README.md
+PRD.md
+*.md
+.vscode/
+.idea/
+
+# Large files
+*.jpg
+*.jpeg
+*.png
+*.bmp
+*.pt
+*.pth
+*.h5
+*.zip
+*.tar
+*.tar.gz

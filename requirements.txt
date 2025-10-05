@@ -1,29 +1,24 @@
-# FRESH ML - Production Requirements (Optimized for Deployment)
-# Only essential dependencies for API functionality
+# FRESH ML - Absolute Minimal Production Requirements
 
-# Core ML Frameworks (CPU-only versions for smaller size)
+# Core ML (CPU-only for smaller size)  
 torch --index-url https://download.pytorch.org/whl/cpu
 torchvision --index-url https://download.pytorch.org/whl/cpu
 ultralytics
 
-# Computer Vision (minimal)
-opencv-python-headless  # Headless version (smaller)
-Pillow
-
-# Essential Scientific Computing
+# Essential Libraries
 numpy
-pandas
+Pillow
+opencv-python-headless
 
 # API Framework
 fastapi
-uvicorn[standard]
+uvicorn
 python-multipart
 
-# Configuration & Cloud Storage
-python-dotenv
+# Cloud Storage
 boto3
 requests
-PyYAML
+python-dotenv
 
-# Data validation
+# Data validation  
 pydantic
