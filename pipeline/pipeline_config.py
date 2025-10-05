@@ -35,7 +35,7 @@ class PipelineConfig:
     ])
     
     # Processing parameters
-    MAX_IMAGE_SIZE: int = 10 * 1024 * 1024  # 10MB
+    MAX_IMAGE_SIZE: int = 50 * 1024 * 1024  # 50MB
     SUPPORTED_FORMATS: List[str] = field(default_factory=lambda: ['.jpg', '.jpeg', '.png', '.bmp'])
     
     # Output configuration

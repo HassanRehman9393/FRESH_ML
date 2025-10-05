@@ -1,59 +1,41 @@
-# FRESH ML - Multi-Class Fruit Detection Training Requirements
+# FRESH ML - Fruit Detection and Classification API Requirements
 
 # Core ML Frameworks
-ultralytics>=8.0.0          # YOLO v8 for object detection
-torch>=2.0.0                # PyTorch deep learning framework
-torchvision>=0.15.0         # Computer vision utilities
-tensorflow>=2.13.0          # For mango classification model
+ultralytics                 # YOLO v8 for object detection
+torch                       # PyTorch deep learning framework
+torchvision                 # Computer vision utilities
 
 # Computer Vision & Image Processing
-opencv-python>=4.8.0        # Image processing and color analysis
-Pillow>=10.0.0              # Image loading and manipulation
-albumentations>=1.3.0       # Advanced data augmentation
+opencv-python               # Image processing and color analysis
+Pillow                      # Image loading and manipulation
+albumentations              # Advanced data augmentation
 
 # Scientific Computing & Data Processing
-numpy>=1.24.0               # Numerical operations
-pandas>=2.0.0               # Data manipulation
-scipy>=1.10.0               # Scientific computing
-scikit-learn>=1.3.0         # Machine learning utilities
+numpy                       # Numerical operations
+pandas                      # Data manipulation
+scipy                       # Scientific computing
+scikit-learn                # Machine learning utilities
 
 # Visualization & Monitoring
-matplotlib>=3.7.0           # Plotting and visualization
-seaborn>=0.12.0             # Statistical data visualization
-plotly>=5.15.0              # Interactive plots
-tqdm>=4.65.0                # Progress bars
+matplotlib                  # Plotting and visualization
+seaborn                     # Statistical data visualization
+plotly                      # Interactive plots
+tqdm                        # Progress bars
 
-# API Framework (for ML Pipeline)
-fastapi>=0.100.0            # Fast API framework for ML endpoints
-uvicorn>=0.22.0             # ASGI server for FastAPI
-python-multipart>=0.0.6     # File upload support
+# API Framework
+fastapi                     # Fast API framework for ML endpoints
+uvicorn                     # ASGI server for FastAPI
+python-multipart            # File upload support
 
 # Additional Libraries
-scikit-image>=0.20.0        # Advanced image processing
-pydantic>=2.0.0             # Data validation
+scikit-image                # Advanced image processing
+pydantic                    # Data validation
 
 # Configuration & Utilities
-PyYAML>=6.0                 # YAML configuration files
-python-dotenv>=1.0.0        # Environment variables
-pathlib                     # Path operations (built-in)
-shutil                      # File operations (built-in)
-json                        # JSON handling (built-in)
-logging                     # Logging utilities (built-in)
-
-# API Development (for future inference server)
-fastapi>=0.100.0            # Fast API framework
-uvicorn>=0.23.0             # ASGI server
-pydantic>=2.0.0             # Data validation
-
-# Model Optimization & Export
-onnx>=1.14.0                # Model export format
-onnxruntime>=1.15.0         # ONNX model inference
+PyYAML                      # YAML configuration files
+python-dotenv               # Environment variables
 
 # Development & Testing
 pytest>=7.4.0              # Testing framework
 black>=23.7.0               # Code formatting
 flake8>=6.0.0               # Code linting
-
-# Optional GPU acceleration (install manually if needed)
-# torch[cuda] - for CUDA GPU support
-# tensorflow[gpu] - for TensorFlow GPU support

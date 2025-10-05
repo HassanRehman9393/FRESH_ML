@@ -160,10 +160,10 @@ async def detect_fruits_upload(
         contents = await file.read()
         file_size_mb = len(contents) / (1024 * 1024)
         
-        if file_size_mb > 10:  # 10MB limit
+        if file_size_mb > 50:  # 50MB limit
             raise HTTPException(
                 status_code=413,
-                detail=f"File too large: {file_size_mb:.1f}MB. Maximum size is 10MB."
+                detail=f"File too large: {file_size_mb:.1f}MB. Maximum size is 50MB."
             )
         
         logger.info(f"🖼️  Processing uploaded image: {file.filename} ({file_size_mb:.1f}MB) for user: {user_id}")
@@ -205,7 +205,9 @@ async def detect_fruits_upload(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Processing error: {str(e)}")
+        logger.error(f"❌ Processing error: {type(e).__name__}: {str(e)}")
+        import traceback
+        logger.error(f"❌ Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
 
 # Base64 image detection endpoint
@@ -378,6 +380,9 @@ def convert_pipeline_result_to_database_format(
 ) -> tuple[ImageProcessingResult, DatabaseRecords]:
     """Convert pipeline result to database-ready format"""
     
+    logger.info(f"🔄 Converting pipeline result. Keys: {list(pipeline_result.keys())}")
+    logger.info(f"🔄 Total fruits in result: {pipeline_result.get('total_fruits', 0)}")
+    
     # Generate UUIDs
     image_id = str(uuid_lib.uuid4())
     
@@ -394,79 +399,159 @@ def convert_pipeline_result_to_database_format(
         file_path=f"uploads/{image_filename}",
         file_name=image_filename,
         metadata={
-            "processing_info": pipeline_result.get('processing_info', {}),
-            "image_dimensions": pipeline_result.get('image_info', {})
-        }
+            "processing_info": pipeline_result.get('pipeline_info', {}),
+            "image_dimensions": pipeline_result.get('image_metadata', {})
+        },
+        created_at=datetime.now()
     )
     image_records.append(image_record)
     
     # Process each detected fruit
-    for fruit in pipeline_result.get('fruits', []):
-        detection_id = str(uuid_lib.uuid4())
-        
-        # Extract bounding box data
-        bbox_data = fruit.get('location', {}).get('bbox', [0, 0, 0, 0])
-        center_data = fruit.get('location', {}).get('center', [0, 0])
-        
-        bounding_box = BoundingBoxData(
-            x1=bbox_data[0],
-            y1=bbox_data[1], 
-            x2=bbox_data[2],
-            y2=bbox_data[3],
-            center_x=center_data[0],
-            center_y=center_data[1],
-            width=bbox_data[2] - bbox_data[0],
-            height=bbox_data[3] - bbox_data[1]
-        )
-        
-        # Map ripeness level to enum
-        ripeness_str = fruit.get('ripeness_level', 'ripe').lower()
-        ripeness_level = RipenessLevel.RIPE  # default
-        if ripeness_str in ['unripe', 'green']:
-            ripeness_level = RipenessLevel.UNRIPE
-        elif ripeness_str in ['overripe', 'very_ripe']:
-            ripeness_level = RipenessLevel.OVERRIPE
-        elif ripeness_str in ['rotten', 'bad']:
-            ripeness_level = RipenessLevel.ROTTEN
-        
-        # Create detection result
-        detection_result = DetectionResult(
-            fruit_type=fruit.get('fruit_type', ''),
-            detection_confidence=fruit.get('confidence_scores', {}).get('detection', 0.0),
-            bounding_box=bounding_box,
-            ripeness_level=ripeness_level,
-            classification_confidence=fruit.get('confidence_scores', {}).get('classification', 0.0),
-            estimated_color=fruit.get('estimated_color'),
-            estimated_size=fruit.get('estimated_size'),
-            quality_score=fruit.get('quality_score')
-        )
-        detection_results.append(detection_result)
-        
-        # Create database records
-        detection_record = DetectionRecord(
-            detection_id=detection_id,
-            user_id=user_id,
-            image_id=image_id,
-            fruit_type=fruit.get('fruit_type'),
-            confidence=fruit.get('confidence_scores', {}).get('detection', 0.0),
-            bounding_box={
-                "x1": bbox_data[0], "y1": bbox_data[1],
-                "x2": bbox_data[2], "y2": bbox_data[3],
-                "center_x": center_data[0], "center_y": center_data[1],
-                "width": bbox_data[2] - bbox_data[0],
-                "height": bbox_data[3] - bbox_data[1]
-            }
-        )
-        detection_records.append(detection_record)
-        
-        classification_record = ClassificationRecord(
-            detection_id=detection_id,
-            ripeness_level=ripeness_level,
-            confidence_score=fruit.get('confidence_scores', {}).get('classification', 0.0),
-            estimated_color=fruit.get('estimated_color'),
-            estimated_size=fruit.get('estimated_size')
-        )
-        classification_records.append(classification_record)
+    for i, fruit in enumerate(pipeline_result.get('fruits', [])):
+        try:
+            logger.info(f"🔄 Processing fruit {i+1}: {fruit.get('fruit_type', 'unknown')}")
+            detection_id = str(uuid_lib.uuid4())
+            classification_id = str(uuid_lib.uuid4())
+            
+            # Extract bounding box data correctly from pipeline structure
+            location_data = fruit.get('location', {})
+            bbox_xyxy = location_data.get('bbox_xyxy', [0, 0, 0, 0])  # [x1, y1, x2, y2]
+            bbox_xywh = location_data.get('bounding_box', [0, 0, 0, 0])  # [x, y, width, height]
+            center_point = location_data.get('center_point', [0, 0])
+            
+            # Use bbox_xyxy if available, otherwise convert from bbox_xywh
+            if bbox_xyxy and sum(bbox_xyxy) > 0:
+                x1, y1, x2, y2 = bbox_xyxy
+            elif bbox_xywh and sum(bbox_xywh) > 0:
+                x, y, w, h = bbox_xywh
+                x1, y1, x2, y2 = x, y, x + w, y + h
+            else:
+                x1, y1, x2, y2 = 0, 0, 0, 0
+            
+            # Safe center calculation to avoid division by zero
+            center_x = int(center_point[0]) if center_point else int((x1 + x2) / 2) if (x1 + x2) != 0 else 0
+            center_y = int(center_point[1]) if center_point else int((y1 + y2) / 2) if (y1 + y2) != 0 else 0
+            
+            bounding_box = BoundingBoxData(
+                x1=int(x1),
+                y1=int(y1),
+                x2=int(x2),
+                y2=int(y2),
+                center_x=center_x,
+                center_y=center_y,
+                width=max(0, int(x2 - x1)),
+                height=max(0, int(y2 - y1))
+            )
+            
+            # Map ripeness level to enum
+            ripeness_str = fruit.get('ripeness_level', 'ripe').lower()
+            ripeness_level = RipenessLevel.RIPE  # default
+            if ripeness_str in ['unripe', 'green']:
+                ripeness_level = RipenessLevel.UNRIPE
+            elif ripeness_str in ['overripe', 'very_ripe']:
+                ripeness_level = RipenessLevel.OVERRIPE
+            elif ripeness_str in ['rotten', 'bad']:
+                ripeness_level = RipenessLevel.ROTTEN
+            
+            # Extract actual color from fruit region with ensemble approach
+            appearance_data = fruit.get('appearance', {})
+            expected_colors = appearance_data.get('expected_colors', {})
+            
+            # Get color from appearance data (from pipeline)
+            pipeline_color = 'unknown'
+            if isinstance(expected_colors, dict):
+                pipeline_color = expected_colors.get('primary', 'unknown')
+            elif isinstance(expected_colors, list) and expected_colors:
+                pipeline_color = expected_colors[0]
+                
+            # Ensemble approach: combine model prediction with color analysis
+            model_ripeness = ripeness_level
+            
+            # If model says ripe but we detect green color, apply correction
+            if (pipeline_color == 'green' and model_ripeness == RipenessLevel.RIPE and 
+                fruit.get('confidence_scores', {}).get('classification', 0) < 0.9):
+                logger.info(f"🔄 Applying color correction: Green fruit classified as ripe, changing to unripe")
+                ripeness_level = RipenessLevel.UNRIPE
+                estimated_color = 'green'
+            else:
+                # Use color based on final ripeness decision
+                if ripeness_level == RipenessLevel.UNRIPE:
+                    estimated_color = 'green'
+                elif ripeness_level == RipenessLevel.RIPE:
+                    estimated_color = 'yellow-orange'
+                elif ripeness_level == RipenessLevel.OVERRIPE:
+                    estimated_color = 'deep-orange'
+                else:
+                    estimated_color = pipeline_color if pipeline_color != 'unknown' else 'unknown'
+            
+            # Calculate relative size based on image dimensions and fruit density
+            bbox_area = (x2 - x1) * (y2 - y1)
+            image_dimensions = pipeline_result.get('image_metadata', {})
+            image_width = image_dimensions.get('width', 800)
+            image_height = image_dimensions.get('height', 800)
+            total_image_area = image_width * image_height
+            total_fruits = len(pipeline_result.get('fruits', []))
+            
+            # Calculate relative size metrics
+            area_percentage = (bbox_area / total_image_area) * 100
+            expected_area_per_fruit = total_image_area / max(total_fruits, 1)
+            relative_size_ratio = bbox_area / expected_area_per_fruit
+            
+            # Improved size estimation considering image scale and fruit density
+            if area_percentage > 15 or relative_size_ratio > 2.0:
+                estimated_size = "large"
+            elif area_percentage > 5 or relative_size_ratio > 1.2:
+                estimated_size = "medium"
+            elif area_percentage > 1 or relative_size_ratio > 0.5:
+                estimated_size = "small"
+            else:
+                estimated_size = "very_small"
+            
+            # Create detection result
+            detection_result = DetectionResult(
+                fruit_type=fruit.get('fruit_type', ''),
+                detection_confidence=fruit.get('confidence_scores', {}).get('detection', 0.0),
+                bounding_box=bounding_box,
+                ripeness_level=ripeness_level,
+                classification_confidence=fruit.get('confidence_scores', {}).get('classification', 0.0),
+                estimated_color=estimated_color,
+                estimated_size=estimated_size
+            )
+            detection_results.append(detection_result)
+            
+            # Create database records
+            detection_record = DetectionRecord(
+                detection_id=detection_id,
+                user_id=user_id,
+                image_id=image_id,
+                fruit_type=fruit.get('fruit_type'),
+                confidence=fruit.get('confidence_scores', {}).get('detection', 0.0),
+                bounding_box={
+                    "x1": int(x1), "y1": int(y1),
+                    "x2": int(x2), "y2": int(y2),
+                    "center_x": center_x, "center_y": center_y,
+                    "width": max(0, int(x2 - x1)),
+                    "height": max(0, int(y2 - y1))
+                },
+                created_at=datetime.now()
+            )
+            detection_records.append(detection_record)
+            
+            classification_record = ClassificationRecord(
+                classification_id=classification_id,
+                detection_id=detection_id,
+                ripeness_level=ripeness_level,
+                confidence_score=fruit.get('confidence_scores', {}).get('classification', 0.0),
+                estimated_color=estimated_color,
+                estimated_size=estimated_size,
+                created_at=datetime.now()
+            )
+            classification_records.append(classification_record)
+            
+        except Exception as fruit_error:
+            logger.error(f"❌ Error processing fruit {i+1}: {type(fruit_error).__name__}: {str(fruit_error)}")
+            logger.error(f"❌ Fruit data: {fruit}")
+            raise fruit_error
     
     # Create image processing result
     processing_result = ImageProcessingResult(

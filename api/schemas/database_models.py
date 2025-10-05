@@ -102,7 +102,6 @@ class DetectionResult(BaseModel):
     # Additional metadata
     estimated_color: Optional[str] = Field(None, description="Estimated fruit color")
     estimated_size: Optional[str] = Field(None, description="Estimated fruit size category")
-    quality_score: Optional[float] = Field(None, ge=0.0, le=10.0, description="Overall quality score")
 
 class ImageProcessingResult(BaseModel):
     """Complete result for a single processed image"""

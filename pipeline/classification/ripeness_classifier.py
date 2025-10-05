@@ -152,9 +152,21 @@ class RipenessClassifier:
         try:
             # Convert numpy array to PIL Image if needed
             if isinstance(image, np.ndarray):
+                # Ensure proper data type
+                if image.dtype != np.uint8:
+                    image = image.astype(np.uint8)
+                
+                # Ensure proper shape
+                if len(image.shape) == 2:
+                    image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+                elif len(image.shape) == 3 and image.shape[2] == 4:
+                    image = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
+                
                 # Convert BGR to RGB if needed
                 if len(image.shape) == 3 and image.shape[2] == 3:
                     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                
+                # Convert to PIL Image
                 image = Image.fromarray(image)
             
             # Apply transforms
@@ -167,6 +179,7 @@ class RipenessClassifier:
             
         except Exception as e:
             logger.error(f"Image preprocessing failed: {str(e)}")
+            logger.error(f"Image type: {type(image)}, shape: {getattr(image, 'shape', 'N/A')}, dtype: {getattr(image, 'dtype', 'N/A')}")
             raise
     
     def classify(self, image: Union[np.ndarray, Image.Image]) -> Dict[str, Any]:
@@ -217,7 +230,15 @@ class RipenessClassifier:
                 'all_probabilities': prob_dict
             }
             
+            # Debug logging to understand predictions
+            top_3_classes = sorted(prob_dict.items(), key=lambda x: x[1], reverse=True)[:3]
             logger.info(f"Classification: {detailed_class} ({ripeness_level}) with confidence {confidence:.3f}")
+            logger.debug(f"Top 3 predictions: {top_3_classes}")
+            
+            # Additional debug for mango predictions specifically
+            if "mango" in detailed_class.lower():
+                mango_probs = {k: v for k, v in prob_dict.items() if "mango" in k.lower()}
+                logger.debug(f"Mango class probabilities: {mango_probs}")
             return result
             
         except Exception as e:
