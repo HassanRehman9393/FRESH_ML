@@ -15,9 +15,50 @@ from typing import List, Tuple, Dict, Any
 class PipelineConfig:
     """Configuration class for FRESH ML pipeline"""
     
-    # Model paths
-    YOLO_MODEL_PATH: str = "models/yolo_detection_best.pt"
-    CLASSIFICATION_MODEL_PATH: str = "models/classification_best_fixed.pth"
+    # Model paths - now dynamically loaded from Digital Ocean Spaces
+    @property
+    def YOLO_MODEL_PATH(self) -> str:
+        """Get YOLO model path from DO Spaces"""
+        try:
+            import sys
+            import os
+            sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+            from pipeline.utils.do_spaces_model_manager import get_model_path
+            
+            model_path = get_model_path("yolo_detection_best.pt")
+            if model_path and os.path.exists(model_path):
+                return model_path
+        except Exception as e:
+            print(f"⚠️  Failed to get YOLO model from DO Spaces: {e}")
+        
+        # Fallback to local
+        local_path = "models/yolo_detection_best.pt"
+        if os.path.exists(local_path):
+            return local_path
+        
+        raise FileNotFoundError("YOLO model not found in DO Spaces or locally")
+    
+    @property
+    def CLASSIFICATION_MODEL_PATH(self) -> str:
+        """Get classification model path from DO Spaces"""
+        try:
+            import sys
+            import os
+            sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+            from pipeline.utils.do_spaces_model_manager import get_model_path
+            
+            model_path = get_model_path("classification_best_fixed.pth")
+            if model_path and os.path.exists(model_path):
+                return model_path
+        except Exception as e:
+            print(f"⚠️  Failed to get classification model from DO Spaces: {e}")
+        
+        # Fallback to local
+        local_path = "models/classification_best_fixed.pth"
+        if os.path.exists(local_path):
+            return local_path
+        
+        raise FileNotFoundError("Classification model not found in DO Spaces or locally")
     
     # Image processing
     YOLO_INPUT_SIZE: Tuple[int, int] = (640, 640)
@@ -44,14 +85,9 @@ class PipelineConfig:
     
     def __post_init__(self):
         """Validate configuration after initialization"""
-        # Convert relative paths to absolute paths
-        base_path = Path(__file__).parent.parent
-        
-        if not os.path.isabs(self.YOLO_MODEL_PATH):
-            self.YOLO_MODEL_PATH = str(base_path / self.YOLO_MODEL_PATH)
-            
-        if not os.path.isabs(self.CLASSIFICATION_MODEL_PATH):
-            self.CLASSIFICATION_MODEL_PATH = str(base_path / self.CLASSIFICATION_MODEL_PATH)
+        # Model paths are now properties that handle their own path resolution
+        # No need to modify them in __post_init__ anymore
+        pass
     
     @classmethod
     def get_ripeness_for_fruit(cls, fruit_type: str) -> List[str]:

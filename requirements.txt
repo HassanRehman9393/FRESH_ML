@@ -35,6 +35,10 @@ pydantic                    # Data validation
 PyYAML                      # YAML configuration files
 python-dotenv               # Environment variables
 
+# Database & Storage
+requests>=2.31.0            # HTTP requests for model downloads
+boto3>=1.28.0               # AWS S3/Digital Ocean Spaces client
+
 # Development & Testing
 pytest>=7.4.0              # Testing framework
 black>=23.7.0               # Code formatting
