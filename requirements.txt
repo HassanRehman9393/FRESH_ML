@@ -1,45 +1,29 @@
-# FRESH ML - Fruit Detection and Classification API Requirements
+# FRESH ML - Production Requirements (Optimized for Deployment)
+# Only essential dependencies for API functionality
 
-# Core ML Frameworks
-ultralytics                 # YOLO v8 for object detection
-torch                       # PyTorch deep learning framework
-torchvision                 # Computer vision utilities
+# Core ML Frameworks (CPU-only versions for smaller size)
+torch --index-url https://download.pytorch.org/whl/cpu
+torchvision --index-url https://download.pytorch.org/whl/cpu
+ultralytics
 
-# Computer Vision & Image Processing
-opencv-python               # Image processing and color analysis
-Pillow                      # Image loading and manipulation
-albumentations              # Advanced data augmentation
+# Computer Vision (minimal)
+opencv-python-headless  # Headless version (smaller)
+Pillow
 
-# Scientific Computing & Data Processing
-numpy                       # Numerical operations
-pandas                      # Data manipulation
-scipy                       # Scientific computing
-scikit-learn                # Machine learning utilities
-
-# Visualization & Monitoring
-matplotlib                  # Plotting and visualization
-seaborn                     # Statistical data visualization
-plotly                      # Interactive plots
-tqdm                        # Progress bars
+# Essential Scientific Computing
+numpy
+pandas
 
 # API Framework
-fastapi                     # Fast API framework for ML endpoints
-uvicorn                     # ASGI server for FastAPI
-python-multipart            # File upload support
+fastapi
+uvicorn[standard]
+python-multipart
 
-# Additional Libraries
-scikit-image                # Advanced image processing
-pydantic                    # Data validation
+# Configuration & Cloud Storage
+python-dotenv
+boto3
+requests
+PyYAML
 
-# Configuration & Utilities
-PyYAML                      # YAML configuration files
-python-dotenv               # Environment variables
-
-# Database & Storage
-requests>=2.31.0            # HTTP requests for model downloads
-boto3>=1.28.0               # AWS S3/Digital Ocean Spaces client
-
-# Development & Testing
-pytest>=7.4.0              # Testing framework
-black>=23.7.0               # Code formatting
-flake8>=6.0.0               # Code linting
+# Data validation
+pydantic
