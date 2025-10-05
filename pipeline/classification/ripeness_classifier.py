@@ -2,8 +2,9 @@
 Ripeness Classification Module
 ==============================
 
-This module handles fruit ripeness classification using the trained classification_best.pth model.
+This module handles fruit ripeness classification using the trained classification_best_fixed.pth model.
 Classifies cropped fruit regions into ripeness levels across 16 classes for 4 fruit types.
+Fixed model with correct class mappings to resolve green mango misclassification issues.
 """
 
 import torch
@@ -99,8 +100,8 @@ class RipenessClassifier:
             
             logger.info(f"Loading classification model from: {self.model_path}")
             
-            # Load the model state dict
-            checkpoint = torch.load(self.model_path, map_location=self.device)
+            # Load the model state dict - disable weights_only for model metadata
+            checkpoint = torch.load(self.model_path, map_location=self.device, weights_only=False)
             
             # Create model architecture (assuming ResNet-based model)
             self.model = self._create_model_architecture()

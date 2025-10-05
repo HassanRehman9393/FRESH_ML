@@ -300,7 +300,7 @@ def main():
     print(f"Best validation accuracy: {best_val_acc:.2f}%")
     
     # Load best model for evaluation
-    model.load_state_dict(torch.load('best_fruit_classification_model.pth'))
+    model.load_state_dict(torch.load('best_fruit_classification_model.pth', weights_only=True))
     
     # Evaluate on test set
     print("\nEvaluating on test set...")

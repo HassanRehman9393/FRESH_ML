@@ -36,7 +36,7 @@ FRESH ML provides automated fruit detection and ripeness classification capabili
 4. **Verify model files**
    Ensure the following models exist in the `models/` directory:
    - `yolo_detection_best.pt` (6MB)
-   - `classification_best.pth` (94MB)
+   - `classification_best_fixed.pth` (94MB) - Updated model with correct class mappings
 
 ## Running the API
 

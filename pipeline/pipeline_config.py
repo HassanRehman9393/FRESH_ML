@@ -17,7 +17,7 @@ class PipelineConfig:
     
     # Model paths
     YOLO_MODEL_PATH: str = "models/yolo_detection_best.pt"
-    CLASSIFICATION_MODEL_PATH: str = "models/classification_best.pth"
+    CLASSIFICATION_MODEL_PATH: str = "models/classification_best_fixed.pth"
     
     # Image processing
     YOLO_INPUT_SIZE: Tuple[int, int] = (640, 640)
