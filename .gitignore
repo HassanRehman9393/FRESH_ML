@@ -30,6 +30,7 @@ data/processed/
 *.tflite
 *.pb
 models/
+models_cache/
 
 # Python
 __pycache__/
