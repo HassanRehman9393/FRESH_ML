@@ -21,7 +21,8 @@ UTA_CSE_Dataset/
 data/unified/
 data/raw/
 data/processed/
-
+Anthracnose/ 
+data/unified/anthracnose/ 
 # Model files
 *.h5
 *.pt
