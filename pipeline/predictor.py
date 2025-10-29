@@ -19,6 +19,7 @@ import time
 
 from .pipeline_config import PipelineConfig
 from .detection.yolo_detector import YOLODetector
+from .detection.disease_detector import DiseaseDetector
 from .classification.ripeness_classifier import RipenessClassifier
 from .utils.image_processor import ImageProcessor
 from .utils.postprocessor import ResultPostProcessor
@@ -48,6 +49,7 @@ class FreshMLPredictor:
         # Initialize components
         self.yolo_detector = None
         self.ripeness_classifier = None
+        self.disease_detector = None
         self.image_processor = ImageProcessor(self.config)
         self.postprocessor = ResultPostProcessor(self.config)
         
@@ -79,6 +81,14 @@ class FreshMLPredictor:
                 device=self.device
             )
             
+            # Load disease detector (optional)
+            logger.info("Loading disease detection models...")
+            self.disease_detector = DiseaseDetector(
+                anthracnose_model_path=self.config.ANTHRACNOSE_MODEL_PATH,
+                citrus_canker_model_path=self.config.CITRUS_CANKER_MODEL_PATH,
+                device=self.device
+            )
+            
             logger.info("All models loaded successfully!")
             
         except Exception as e:
@@ -88,7 +98,8 @@ class FreshMLPredictor:
     def predict(self, 
                 image: Union[str, np.ndarray, Image.Image],
                 return_visualization: bool = False,
-                confidence_threshold: Optional[float] = None) -> Dict[str, Any]:
+                confidence_threshold: Optional[float] = None,
+                include_disease_detection: bool = True) -> Dict[str, Any]:
         """
         Predict fruits in image with comprehensive analysis
         
@@ -96,9 +107,10 @@ class FreshMLPredictor:
             image: Input image (file path, numpy array, or PIL Image)
             return_visualization: Whether to return annotated image
             confidence_threshold: Custom confidence threshold (overrides default)
+            include_disease_detection: Whether to include disease detection
             
         Returns:
-            Dictionary containing detection and classification results
+            Dictionary containing detection, classification, and disease results
         """
         start_time = time.time()
         
@@ -138,10 +150,29 @@ class FreshMLPredictor:
                 # Classify ripeness
                 ripeness_result = self.ripeness_classifier.classify(cropped_fruit)
                 
-                # Combine detection and classification
+                # Detect disease (optional)
+                disease_result = {}
+                if include_disease_detection and self.disease_detector is not None:
+                    try:
+                        disease_result = self.disease_detector.detect_disease(
+                            image=cropped_fruit,
+                            fruit_type=detection['fruit_type'],
+                            return_probabilities=True
+                        )
+                    except Exception as e:
+                        logger.warning(f"Disease detection failed: {e}")
+                        disease_result = {
+                            'disease': 'unknown',
+                            'confidence': 0.0,
+                            'is_diseased': False,
+                            'error': str(e)
+                        }
+                
+                # Combine detection, classification, and disease results
                 combined_result = {
                     **detection,
-                    **ripeness_result
+                    **ripeness_result,
+                    **disease_result
                 }
                 classification_results.append(combined_result)
             
@@ -191,7 +222,7 @@ class FreshMLPredictor:
     
     def get_model_info(self) -> Dict[str, Any]:
         """Get information about loaded models"""
-        return {
+        info = {
             'yolo_model': {
                 'path': self.config.YOLO_MODEL_PATH,
                 'classes': self.config.FRUIT_CLASSES,
@@ -206,3 +237,9 @@ class FreshMLPredictor:
             'confidence_threshold': self.config.CONFIDENCE_THRESHOLD,
             'iou_threshold': self.config.IOU_THRESHOLD
         }
+        
+        # Add disease detection info if available
+        if self.disease_detector is not None:
+            info['disease_detection'] = self.disease_detector.get_model_info()
+        
+        return info

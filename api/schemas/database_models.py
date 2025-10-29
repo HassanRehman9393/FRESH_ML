@@ -20,6 +20,23 @@ class RipenessLevel(str, Enum):
     OVERRIPE = "overripe"
     ROTTEN = "rotten"
 
+# Enum for disease types
+class DiseaseType(str, Enum):
+    """Disease types for disease detection"""
+    HEALTHY = "healthy"
+    ANTHRACNOSE = "anthracnose"
+    CITRUS_CANKER = "citrus_canker"
+    UNKNOWN = "unknown"
+
+# Severity levels for disease
+class DiseaseSeverity(str, Enum):
+    """Disease severity levels"""
+    NONE = "none"
+    MILD = "mild"
+    MODERATE = "moderate"
+    SEVERE = "severe"
+    CRITICAL = "critical"
+
 # Database Models (matching Supabase schema)
 class ImageRecord(BaseModel):
     """Image record matching the images table"""
@@ -49,6 +66,17 @@ class ClassificationRecord(BaseModel):
     estimated_color: Optional[str] = Field(None, description="Estimated fruit color")
     estimated_size: Optional[str] = Field(None, description="Estimated fruit size")
     created_at: Optional[datetime] = Field(None, description="Classification timestamp")
+
+class DiseaseDetectionRecord(BaseModel):
+    """Disease detection result matching the disease_detections table"""
+    disease_detection_id: Optional[str] = Field(None, description="Disease detection UUID (auto-generated)")
+    detection_id: str = Field(..., description="Detection UUID")
+    disease_type: DiseaseType = Field(..., description="Detected disease type")
+    is_diseased: bool = Field(..., description="Whether fruit is diseased")
+    disease_confidence: float = Field(..., ge=0.0, le=1.0, description="Disease detection confidence")
+    severity_level: Optional[str] = Field(None, description="Disease severity (mild, moderate, severe, critical)")
+    probabilities: Optional[Dict[str, float]] = Field(None, description="Class probabilities")
+    created_at: Optional[datetime] = Field(None, description="Disease detection timestamp")
 
 # API Request Models
 class ImageData(BaseModel):
@@ -99,6 +127,11 @@ class DetectionResult(BaseModel):
     ripeness_level: RipenessLevel = Field(..., description="Classified ripeness level")
     classification_confidence: float = Field(..., ge=0.0, le=1.0, description="Classification confidence")
     
+    # Disease detection results
+    disease_type: Optional[DiseaseType] = Field(None, description="Detected disease type")
+    disease_confidence: Optional[float] = Field(None, ge=0.0, le=1.0, description="Disease detection confidence")
+    is_diseased: Optional[bool] = Field(None, description="Whether fruit is diseased")
+    
     # Additional metadata
     estimated_color: Optional[str] = Field(None, description="Estimated fruit color")
     estimated_size: Optional[str] = Field(None, description="Estimated fruit size category")
@@ -143,6 +176,7 @@ class DatabaseRecords(BaseModel):
     images: List[ImageRecord] = Field(..., description="Image records for images table")
     detections: List[DetectionRecord] = Field(..., description="Detection records for detection_results table")
     classifications: List[ClassificationRecord] = Field(..., description="Classification records for classification_results table")
+    disease_detections: List[DiseaseDetectionRecord] = Field(default_factory=list, description="Disease detection records for disease_detections table")
 
 # Batch Processing Models
 class BatchProcessingStatus(str, Enum):
@@ -179,11 +213,51 @@ class ModelInfo(BaseModel):
     """Information about loaded models"""
     yolo_model: Dict[str, Any] = Field(..., description="YOLO model information")
     classification_model: Dict[str, Any] = Field(..., description="Classification model information")
+    disease_detection_model: Optional[Dict[str, Any]] = Field(None, description="Disease detection model information")
     device: str = Field(..., description="Processing device")
     confidence_threshold: float = Field(..., description="Default confidence threshold")
     iou_threshold: float = Field(..., description="IOU threshold for detection")
     supported_fruits: List[str] = Field(..., description="List of supported fruit types")
     supported_ripeness_levels: List[str] = Field(..., description="List of supported ripeness levels")
+    supported_disease_types: List[str] = Field(default_factory=lambda: ["healthy", "anthracnose", "citrus_canker"], description="List of supported disease types")
+
+# Disease Detection Response Models
+class DiseaseDetectionResult(BaseModel):
+    """Single disease detection result"""
+    disease_type: DiseaseType = Field(..., description="Detected disease type")
+    is_diseased: bool = Field(..., description="Whether disease is present")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Disease detection confidence")
+    severity: Optional[DiseaseSeverity] = Field(None, description="Disease severity level")
+    probabilities: Optional[Dict[str, float]] = Field(None, description="Class probabilities")
+    affected_area_percentage: Optional[float] = Field(None, description="Percentage of fruit affected")
+    recommendations: Optional[List[str]] = Field(None, description="Treatment recommendations")
+
+class DiseaseAnalysisResponse(BaseModel):
+    """Response for disease detection analysis"""
+    success: bool = Field(..., description="Processing success status")
+    timestamp: datetime = Field(..., description="Processing timestamp")
+    processing_time: str = Field(..., description="Total processing time")
+    user_id: str = Field(..., description="User UUID")
+    
+    # Image info
+    image_id: str = Field(..., description="Image UUID")
+    filename: str = Field(..., description="Image filename")
+    
+    # Disease detection results
+    disease_detected: bool = Field(..., description="Whether any disease was detected")
+    disease_results: List[DiseaseDetectionResult] = Field(..., description="Disease detection results")
+    
+    # Summary statistics
+    total_fruits_analyzed: int = Field(..., ge=0, description="Total number of fruits analyzed")
+    total_diseased: int = Field(..., ge=0, description="Number of diseased fruits")
+    total_healthy: int = Field(..., ge=0, description="Number of healthy fruits")
+    
+    # Disease distribution
+    disease_distribution: Dict[str, int] = Field(..., description="Distribution of diseases detected")
+    
+    # Optional fields
+    errors: List[str] = Field(default_factory=list, description="Any processing errors")
+    message: Optional[str] = Field(None, description="Additional message")
 
 # Error Models
 class APIError(BaseModel):

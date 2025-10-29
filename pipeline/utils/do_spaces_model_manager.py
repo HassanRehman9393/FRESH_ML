@@ -52,7 +52,9 @@ class DOSpacesModelManager:
         # Model mapping
         self.models = {
             'yolo_detection_best.pt': 'models/yolo_detection_best.pt',
-            'classification_best_fixed.pth': 'models/classification_best_fixed.pth'
+            'classification_best_fixed.pth': 'models/classification_best_fixed.pth',
+            'anthracnose_detection_model.pth': 'models/anthracnose_detection_model.pth',
+            'citrus_canker_detection_model.pth': 'models/citrus_canker_detection_model.pth'
         }
     
     def is_model_cached(self, model_name: str) -> Tuple[bool, Optional[Path]]:

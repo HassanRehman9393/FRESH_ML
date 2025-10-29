@@ -25,7 +25,14 @@ from .database_models import (
     ImageRecord,
     DetectionRecord,
     ClassificationRecord,
+    DiseaseDetectionRecord,
     RipenessLevel,
+    DiseaseType,
+    DiseaseSeverity,
+    
+    # Disease Detection Models
+    DiseaseDetectionResult,
+    DiseaseAnalysisResponse,
     
     # Batch Processing
     BatchStatusResponse,
@@ -64,7 +71,14 @@ __all__ = [
     "ImageRecord",
     "DetectionRecord",
     "ClassificationRecord",
+    "DiseaseDetectionRecord",
     "RipenessLevel",
+    "DiseaseType",
+    "DiseaseSeverity",
+    
+    # Disease Detection Models
+    "DiseaseDetectionResult",
+    "DiseaseAnalysisResponse",
     
     # Batch Processing
     "BatchStatusResponse",

@@ -60,11 +60,57 @@ class PipelineConfig:
         
         raise FileNotFoundError("Classification model not found in DO Spaces or locally")
     
+    @property
+    def ANTHRACNOSE_MODEL_PATH(self) -> str:
+        """Get Anthracnose disease detection model path from DO Spaces"""
+        try:
+            import sys
+            import os
+            sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+            from pipeline.utils.do_spaces_model_manager import get_model_path
+            
+            model_path = get_model_path("anthracnose_detection_model.pth")
+            if model_path and os.path.exists(model_path):
+                return model_path
+        except Exception as e:
+            print(f"⚠️  Failed to get Anthracnose model from DO Spaces: {e}")
+        
+        # Fallback to local
+        local_path = "models/anthracnose_detection_model.pth"
+        if os.path.exists(local_path):
+            return local_path
+        
+        return None  # Optional model
+    
+    @property
+    def CITRUS_CANKER_MODEL_PATH(self) -> str:
+        """Get Citrus Canker disease detection model path from DO Spaces"""
+        try:
+            import sys
+            import os
+            sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+            from pipeline.utils.do_spaces_model_manager import get_model_path
+            
+            model_path = get_model_path("citrus_canker_detection_model.pth")
+            if model_path and os.path.exists(model_path):
+                return model_path
+        except Exception as e:
+            print(f"⚠️  Failed to get Citrus Canker model from DO Spaces: {e}")
+        
+        # Fallback to local
+        local_path = "models/citrus_canker_detection_model.pth"
+        if os.path.exists(local_path):
+            return local_path
+        
+        return None  # Optional model
+    
     # Image processing
     YOLO_INPUT_SIZE: Tuple[int, int] = (640, 640)
     CLASSIFICATION_INPUT_SIZE: Tuple[int, int] = (224, 224)
+    DISEASE_DETECTION_INPUT_SIZE: Tuple[int, int] = (224, 224)
     CONFIDENCE_THRESHOLD: float = 0.5
     IOU_THRESHOLD: float = 0.45
+    DISEASE_CONFIDENCE_THRESHOLD: float = 0.7  # Higher threshold for disease detection
     
     # Fruit classes - using default_factory to avoid mutable default
     FRUIT_CLASSES: List[str] = field(default_factory=lambda: ["mango", "orange", "guava", "grapefruit"])
@@ -104,4 +150,16 @@ class PipelineConfig:
         """Check if model files exist"""
         yolo_exists = os.path.exists(self.YOLO_MODEL_PATH)
         classification_exists = os.path.exists(self.CLASSIFICATION_MODEL_PATH)
+        
+        # Disease models are optional
+        anthracnose_exists = self.ANTHRACNOSE_MODEL_PATH and os.path.exists(self.ANTHRACNOSE_MODEL_PATH)
+        citrus_canker_exists = self.CITRUS_CANKER_MODEL_PATH and os.path.exists(self.CITRUS_CANKER_MODEL_PATH)
+        
+        # Log disease model status
+        if not anthracnose_exists:
+            print("⚠️  Anthracnose detection model not found (optional)")
+        if not citrus_canker_exists:
+            print("⚠️  Citrus Canker detection model not found (optional)")
+        
+        # Only require YOLO and classification models
         return yolo_exists and classification_exists

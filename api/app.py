@@ -20,7 +20,7 @@ import time
 import asyncio
 import uuid
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, List
 from contextlib import asynccontextmanager
 
 # Import pipeline
@@ -43,7 +43,12 @@ from api.schemas.models import (
     ImageRecord,
     DetectionRecord,
     ClassificationRecord,
-    RipenessLevel
+    DiseaseDetectionRecord,
+    RipenessLevel,
+    DiseaseType,
+    DiseaseSeverity,
+    DiseaseDetectionResult,
+    DiseaseAnalysisResponse
 )
 from datetime import datetime
 import uuid as uuid_lib
@@ -114,11 +119,13 @@ async def get_model_info():
     return ModelInfo(
         yolo_model=model_info['yolo_model'],
         classification_model=model_info['classification_model'],
+        disease_detection_model=model_info.get('disease_detection'),
         device=model_info['device'],
         confidence_threshold=model_info['confidence_threshold'],
         iou_threshold=model_info['iou_threshold'],
         supported_fruits=model_info['yolo_model']['classes'],
-        supported_ripeness_levels=[level.value for level in RipenessLevel]
+        supported_ripeness_levels=[level.value for level in RipenessLevel],
+        supported_disease_types=[dtype.value for dtype in DiseaseType]
     )
 
 # Main fruit detection endpoint - File upload
@@ -361,16 +368,461 @@ async def root():
     return {
         "message": "FRESH ML API",
         "version": "1.0.0",
-        "description": "Fruit Detection and Ripeness Classification API",
+        "description": "Fruit Detection, Ripeness Classification, and Disease Detection API",
         "endpoints": {
             "/api/health": "Health check",
             "/api/models/info": "Model information",
             "/api/detection/fruits": "Single image detection (file upload)",
             "/api/detection/fruits/base64": "Single image detection (base64)",
             "/api/detection/fruits/batch": "Batch image processing",
+            "/api/disease/detect": "Disease detection (file upload)",
+            "/api/disease/detect/base64": "Disease detection (base64)",
             "/docs": "API documentation"
         }
     }
+
+# Disease Detection Endpoints
+@app.post("/api/disease/detect", response_model=DiseaseAnalysisResponse)
+async def detect_disease_upload(
+    file: UploadFile = File(...),
+    user_id: str = None,
+    fruit_type: str = None,
+    confidence_threshold: float = 0.7
+):
+    """
+    Detect diseases in fruit image - Direct disease analysis
+    
+    This endpoint analyzes the entire image for disease without requiring YOLO detection.
+    If fruit_type is not specified, it will try to detect fruits first.
+    
+    Args:
+        file: Uploaded image file (JPEG, PNG, BMP)
+        user_id: User UUID for database association
+        fruit_type: Fruit type hint (mango, orange, grapefruit) - optional
+        confidence_threshold: Disease confidence threshold (default: 0.7)
+    
+    Returns:
+        Disease detection analysis (focused on disease information only)
+    """
+    if predictor is None:
+        raise HTTPException(status_code=503, detail="Models not loaded")
+    
+    # Check if disease detector is available
+    if predictor.disease_detector is None:
+        raise HTTPException(
+            status_code=503, 
+            detail="Disease detection models not loaded. Please ensure anthracnose and citrus canker models are available."
+        )
+    
+    # Default user_id for testing if not provided
+    if not user_id:
+        user_id = "00000000-0000-0000-0000-000000000000"  # Default test user
+    
+    try:
+        # Validate file type
+        if not file.content_type.startswith('image/'):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid file type: {file.content_type}. Please upload an image file."
+            )
+        
+        # Read and validate file size
+        contents = await file.read()
+        file_size_mb = len(contents) / (1024 * 1024)
+        
+        if file_size_mb > 50:  # 50MB limit
+            raise HTTPException(
+                status_code=413,
+                detail=f"File too large: {file_size_mb:.1f}MB. Maximum size is 50MB."
+            )
+        
+        logger.info(f"🦠 Disease detection for image: {file.filename} ({file_size_mb:.1f}MB) for user: {user_id}")
+        
+        # Convert to numpy array
+        nparr = np.frombuffer(contents, np.uint8)
+        image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        
+        if image is None:
+            raise HTTPException(status_code=400, detail="Could not decode image file")
+        
+        start_time = time.time()
+        disease_results = []
+        errors = []
+        
+        # If fruit_type is provided, analyze the whole image directly
+        if fruit_type:
+            logger.info(f"🎯 Direct disease analysis for fruit type: {fruit_type}")
+            try:
+                disease_result = predictor.disease_detector.detect_disease(
+                    image=image,
+                    fruit_type=fruit_type.lower(),
+                    return_probabilities=True
+                )
+                
+                if disease_result and disease_result.get('confidence', 0) >= confidence_threshold:
+                    disease_results.append(DiseaseDetectionResult(
+                        disease_type=DiseaseType(disease_result.get('disease_type', 'unknown')),
+                        is_diseased=disease_result.get('is_diseased', False),
+                        confidence=disease_result.get('confidence', 0.0),
+                        severity=None,  # Future enhancement
+                        probabilities=disease_result.get('probabilities'),
+                        affected_area_percentage=None,
+                        recommendations=_get_disease_recommendations(disease_result.get('disease_type'))
+                    ))
+                    
+            except Exception as e:
+                logger.error(f"Direct disease detection failed: {e}")
+                errors.append(f"Disease detection error: {str(e)}")
+        
+        # If no fruit_type provided, try to detect fruits first
+        else:
+            logger.info(f"🔍 Running full pipeline with disease detection...")
+            pipeline_result = predictor.predict(
+                image=image,
+                return_visualization=False,
+                confidence_threshold=0.3,  # Lower threshold to catch more fruits
+                include_disease_detection=True
+            )
+            
+            logger.info(f"📊 Pipeline result: {pipeline_result.get('total_fruits', 0)} fruits detected")
+            
+            # Extract disease results from pipeline
+            fruits_found = pipeline_result.get('fruits', [])
+            
+            if not fruits_found:
+                logger.warning("⚠️ No fruits detected by YOLO. Attempting direct whole-image analysis...")
+                # Try to infer fruit type from image and analyze directly
+                # Attempt with common fruit types
+                for try_fruit_type in ['mango', 'orange']:
+                    try:
+                        logger.info(f"🎯 Attempting direct analysis as {try_fruit_type}...")
+                        disease_result = predictor.disease_detector.detect_disease(
+                            image=image,
+                            fruit_type=try_fruit_type,
+                            return_probabilities=True
+                        )
+                        
+                        if disease_result and disease_result.get('confidence', 0) >= confidence_threshold:
+                            disease_type_str = disease_result.get('disease', 'unknown')
+                            
+                            # Map to enum
+                            disease_type_enum = DiseaseType.HEALTHY
+                            if disease_type_str == 'anthracnose':
+                                disease_type_enum = DiseaseType.ANTHRACNOSE
+                            elif disease_type_str == 'citrus_canker':
+                                disease_type_enum = DiseaseType.CITRUS_CANKER
+                            
+                            disease_results.append(DiseaseDetectionResult(
+                                disease_type=disease_type_enum,
+                                is_diseased=disease_result.get('is_diseased', False),
+                                confidence=disease_result.get('confidence', 0.0),
+                                severity=None,
+                                probabilities=disease_result.get('probabilities'),
+                                affected_area_percentage=None,
+                                recommendations=_get_disease_recommendations(disease_type_str)
+                            ))
+                            logger.info(f"✅ Disease detected via direct analysis: {disease_type_str} ({disease_result.get('confidence', 0):.2f})")
+                            break  # Found disease, no need to try other fruit types
+                    except Exception as e:
+                        logger.warning(f"Direct analysis as {try_fruit_type} failed: {e}")
+                        continue
+            else:
+                # Extract disease results from detected fruits
+                for fruit in fruits_found:
+                    disease_data = fruit.get('disease_detection', {})
+                    
+                    if disease_data and not disease_data.get('error'):
+                        disease_type_str = disease_data.get('disease', 'healthy')
+                        confidence = disease_data.get('confidence', 0.0)
+                        
+                        logger.info(f"🔍 Fruit disease data: {disease_type_str} (confidence: {confidence:.2f})")
+                        
+                        if confidence >= confidence_threshold:
+                            disease_type_enum = DiseaseType.HEALTHY
+                            if disease_type_str == 'anthracnose':
+                                disease_type_enum = DiseaseType.ANTHRACNOSE
+                            elif disease_type_str == 'citrus_canker':
+                                disease_type_enum = DiseaseType.CITRUS_CANKER
+                            elif disease_type_str == 'unknown':
+                                disease_type_enum = DiseaseType.UNKNOWN
+                            
+                            disease_results.append(DiseaseDetectionResult(
+                                disease_type=disease_type_enum,
+                                is_diseased=disease_data.get('is_diseased', False),
+                                confidence=confidence,
+                                severity=None,
+                                probabilities=disease_data.get('probabilities'),
+                                affected_area_percentage=None,
+                                recommendations=_get_disease_recommendations(disease_type_str)
+                            ))
+                        else:
+                            logger.info(f"⚠️ Disease confidence {confidence:.2f} below threshold {confidence_threshold}")
+                    else:
+                        error_msg = disease_data.get('error', 'No disease data') if disease_data else 'Missing disease_detection key'
+                        logger.warning(f"⚠️ No valid disease data for fruit: {error_msg}")
+        
+        processing_time = time.time() - start_time
+        
+        # Calculate statistics
+        total_diseased = sum(1 for d in disease_results if d.is_diseased)
+        total_healthy = sum(1 for d in disease_results if not d.is_diseased)
+        disease_detected = any(d.is_diseased for d in disease_results)
+        
+        # Disease distribution
+        disease_dist = {}
+        for d in disease_results:
+            disease_name = d.disease_type.value
+            disease_dist[disease_name] = disease_dist.get(disease_name, 0) + 1
+        
+        # Generate image ID
+        image_id = str(uuid.uuid4())
+        
+        response = DiseaseAnalysisResponse(
+            success=True,
+            timestamp=datetime.now(),
+            processing_time=f"{processing_time:.2f}s",
+            user_id=user_id,
+            image_id=image_id,
+            filename=file.filename or "uploaded_image.jpg",
+            disease_detected=disease_detected,
+            disease_results=disease_results,
+            total_fruits_analyzed=len(disease_results),
+            total_diseased=total_diseased,
+            total_healthy=total_healthy,
+            disease_distribution=disease_dist,
+            errors=errors,
+            message=f"Analyzed {len(disease_results)} fruit(s): {total_diseased} diseased, {total_healthy} healthy"
+        )
+        
+        logger.info(f"✅ Disease analysis completed: {total_diseased}/{len(disease_results)} diseased fruits")
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Disease detection error: {type(e).__name__}: {str(e)}")
+        import traceback
+        logger.error(f"❌ Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Disease detection failed: {str(e)}")
+
+@app.post("/api/disease/detect/base64", response_model=DiseaseAnalysisResponse)
+async def detect_disease_base64(request: SingleImageDetectionRequest, fruit_type: str = None):
+    """
+    Detect diseases in fruit from base64 encoded image - Direct disease analysis
+    
+    This endpoint analyzes the image for disease without requiring YOLO detection.
+    If fruit_type is not specified, it will try to detect fruits first.
+    
+    Args:
+        request: Request containing base64 encoded image
+        fruit_type: Fruit type hint (mango, orange, grapefruit) - optional
+    
+    Returns:
+        Disease detection analysis (focused on disease information only)
+    """
+    if predictor is None:
+        raise HTTPException(status_code=503, detail="Models not loaded")
+    
+    # Check if disease detector is available
+    if predictor.disease_detector is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Disease detection models not loaded"
+        )
+    
+    try:
+        # Decode base64 image
+        try:
+            image_bytes = base64.b64decode(request.image_base64)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid base64 image data")
+        
+        # Convert to numpy array
+        nparr = np.frombuffer(image_bytes, np.uint8)
+        image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        
+        if image is None:
+            raise HTTPException(status_code=400, detail="Could not decode image")
+        
+        logger.info(f"🦠 Disease detection for base64 image ({len(image_bytes)/1024:.1f}KB) for user: {request.user_id}")
+        
+        start_time = time.time()
+        disease_results = []
+        errors = []
+        confidence_threshold = request.confidence_threshold or 0.7
+        
+        # If fruit_type is provided, analyze the whole image directly
+        if fruit_type:
+            logger.info(f"🎯 Direct disease analysis for fruit type: {fruit_type}")
+            try:
+                disease_result = predictor.disease_detector.detect_disease(
+                    image=image,
+                    fruit_type=fruit_type.lower(),
+                    return_probabilities=True
+                )
+                
+                if disease_result and disease_result.get('confidence', 0) >= confidence_threshold:
+                    disease_results.append(DiseaseDetectionResult(
+                        disease_type=DiseaseType(disease_result.get('disease_type', 'unknown')),
+                        is_diseased=disease_result.get('is_diseased', False),
+                        confidence=disease_result.get('confidence', 0.0),
+                        severity=None,
+                        probabilities=disease_result.get('probabilities'),
+                        affected_area_percentage=None,
+                        recommendations=_get_disease_recommendations(disease_result.get('disease_type'))
+                    ))
+                    
+            except Exception as e:
+                logger.error(f"Direct disease detection failed: {e}")
+                errors.append(f"Disease detection error: {str(e)}")
+        
+        # If no fruit_type provided, try to detect fruits first
+        else:
+            logger.info(f"🔍 Running full pipeline with disease detection...")
+            pipeline_result = predictor.predict(
+                image=image,
+                return_visualization=False,
+                confidence_threshold=0.3,
+                include_disease_detection=True
+            )
+            
+            logger.info(f"📊 Pipeline result: {pipeline_result.get('total_fruits', 0)} fruits detected")
+            
+            # Extract disease results from pipeline
+            fruits_found = pipeline_result.get('fruits', [])
+            
+            if not fruits_found:
+                logger.warning("⚠️ No fruits detected by YOLO. Attempting direct whole-image analysis...")
+                # Try to infer fruit type from image and analyze directly
+                for try_fruit_type in ['mango', 'orange']:
+                    try:
+                        logger.info(f"🎯 Attempting direct analysis as {try_fruit_type}...")
+                        disease_result = predictor.disease_detector.detect_disease(
+                            image=image,
+                            fruit_type=try_fruit_type,
+                            return_probabilities=True
+                        )
+                        
+                        if disease_result and disease_result.get('confidence', 0) >= confidence_threshold:
+                            disease_type_str = disease_result.get('disease', 'unknown')
+                            
+                            disease_type_enum = DiseaseType.HEALTHY
+                            if disease_type_str == 'anthracnose':
+                                disease_type_enum = DiseaseType.ANTHRACNOSE
+                            elif disease_type_str == 'citrus_canker':
+                                disease_type_enum = DiseaseType.CITRUS_CANKER
+                            
+                            disease_results.append(DiseaseDetectionResult(
+                                disease_type=disease_type_enum,
+                                is_diseased=disease_result.get('is_diseased', False),
+                                confidence=disease_result.get('confidence', 0.0),
+                                severity=None,
+                                probabilities=disease_result.get('probabilities'),
+                                affected_area_percentage=None,
+                                recommendations=_get_disease_recommendations(disease_type_str)
+                            ))
+                            logger.info(f"✅ Disease detected via direct analysis: {disease_type_str}")
+                            break
+                    except Exception as e:
+                        logger.warning(f"Direct analysis as {try_fruit_type} failed: {e}")
+                        continue
+            else:
+                # Extract disease results from detected fruits
+                for fruit in fruits_found:
+                    disease_data = fruit.get('disease_detection', {})
+                    
+                    if disease_data and not disease_data.get('error'):
+                        disease_type_str = disease_data.get('disease', 'healthy')
+                        confidence = disease_data.get('confidence', 0.0)
+                        
+                        logger.info(f"🔍 Fruit disease data: {disease_type_str} (confidence: {confidence:.2f})")
+                        
+                        if confidence >= confidence_threshold:
+                            disease_type_enum = DiseaseType.HEALTHY
+                            if disease_type_str == 'anthracnose':
+                                disease_type_enum = DiseaseType.ANTHRACNOSE
+                            elif disease_type_str == 'citrus_canker':
+                                disease_type_enum = DiseaseType.CITRUS_CANKER
+                            elif disease_type_str == 'unknown':
+                                disease_type_enum = DiseaseType.UNKNOWN
+                            
+                            disease_results.append(DiseaseDetectionResult(
+                                disease_type=disease_type_enum,
+                                is_diseased=disease_data.get('is_diseased', False),
+                                confidence=confidence,
+                                severity=None,
+                                probabilities=disease_data.get('probabilities'),
+                                affected_area_percentage=None,
+                                recommendations=_get_disease_recommendations(disease_type_str)
+                            ))
+        
+        processing_time = time.time() - start_time
+        
+        # Calculate statistics
+        total_diseased = sum(1 for d in disease_results if d.is_diseased)
+        total_healthy = sum(1 for d in disease_results if not d.is_diseased)
+        disease_detected = any(d.is_diseased for d in disease_results)
+        
+        # Disease distribution
+        disease_dist = {}
+        for d in disease_results:
+            disease_name = d.disease_type.value
+            disease_dist[disease_name] = disease_dist.get(disease_name, 0) + 1
+        
+        # Generate image ID
+        image_id = str(uuid.uuid4())
+        
+        response = DiseaseAnalysisResponse(
+            success=True,
+            timestamp=datetime.now(),
+            processing_time=f"{processing_time:.2f}s",
+            user_id=request.user_id,
+            image_id=image_id,
+            filename=request.image_name,
+            disease_detected=disease_detected,
+            disease_results=disease_results,
+            total_fruits_analyzed=len(disease_results),
+            total_diseased=total_diseased,
+            total_healthy=total_healthy,
+            disease_distribution=disease_dist,
+            errors=errors,
+            message=f"Analyzed {len(disease_results)} fruit(s): {total_diseased} diseased, {total_healthy} healthy"
+        )
+        
+        logger.info(f"✅ Disease analysis completed: {total_diseased}/{len(disease_results)} diseased fruits")
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Disease detection error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Disease detection failed: {str(e)}")
+
+
+def _get_disease_recommendations(disease_type: str) -> List[str]:
+    """Get treatment recommendations for a disease"""
+    recommendations = {
+        'anthracnose': [
+            "Remove and destroy infected fruits immediately",
+            "Apply copper-based fungicides",
+            "Improve air circulation around trees",
+            "Avoid overhead irrigation",
+            "Practice good sanitation - remove fallen debris"
+        ],
+        'citrus_canker': [
+            "Remove and destroy severely infected plant parts",
+            "Apply copper-based bactericides",
+            "Implement windbreaks to reduce spread",
+            "Disinfect pruning tools between cuts",
+            "Quarantine affected trees if possible"
+        ],
+        'healthy': [
+            "Continue regular monitoring",
+            "Maintain proper nutrition and irrigation",
+            "Practice preventive measures"
+        ]
+    }
+    return recommendations.get(disease_type, ["Consult agricultural extension service for specific recommendations"])
 
 # Helper functions
 def convert_pipeline_result_to_database_format(
@@ -391,6 +843,7 @@ def convert_pipeline_result_to_database_format(
     image_records = []
     detection_records = []
     classification_records = []
+    disease_detection_records = []
     
     # Create image record
     image_record = ImageRecord(
@@ -507,6 +960,21 @@ def convert_pipeline_result_to_database_format(
             else:
                 estimated_size = "very_small"
             
+            # Extract disease detection results if available
+            disease_data = fruit.get('disease_detection', {})
+            disease_type_str = disease_data.get('disease', 'healthy')
+            is_diseased = disease_data.get('is_diseased', False)
+            disease_confidence = disease_data.get('confidence', 0.0)
+            
+            # Map disease string to enum
+            disease_type = DiseaseType.HEALTHY  # default
+            if disease_type_str == 'anthracnose':
+                disease_type = DiseaseType.ANTHRACNOSE
+            elif disease_type_str == 'citrus_canker':
+                disease_type = DiseaseType.CITRUS_CANKER
+            elif disease_type_str == 'unknown' or disease_data.get('error'):
+                disease_type = DiseaseType.UNKNOWN
+            
             # Create detection result
             detection_result = DetectionResult(
                 fruit_type=fruit.get('fruit_type', ''),
@@ -514,6 +982,9 @@ def convert_pipeline_result_to_database_format(
                 bounding_box=bounding_box,
                 ripeness_level=ripeness_level,
                 classification_confidence=fruit.get('confidence_scores', {}).get('classification', 0.0),
+                disease_type=disease_type if disease_data else None,
+                disease_confidence=disease_confidence if disease_data else None,
+                is_diseased=is_diseased if disease_data else None,
                 estimated_color=estimated_color,
                 estimated_size=estimated_size
             )
@@ -548,6 +1019,21 @@ def convert_pipeline_result_to_database_format(
             )
             classification_records.append(classification_record)
             
+            # Create disease detection record if disease detection was performed
+            if disease_data and not disease_data.get('error'):
+                disease_detection_id = str(uuid_lib.uuid4())
+                disease_detection_record = DiseaseDetectionRecord(
+                    disease_detection_id=disease_detection_id,
+                    detection_id=detection_id,
+                    disease_type=disease_type,
+                    is_diseased=is_diseased,
+                    disease_confidence=disease_confidence,
+                    severity_level=None,  # Future enhancement
+                    probabilities=disease_data.get('probabilities'),
+                    created_at=datetime.now()
+                )
+                disease_detection_records.append(disease_detection_record)
+            
         except Exception as fruit_error:
             logger.error(f"❌ Error processing fruit {i+1}: {type(fruit_error).__name__}: {str(fruit_error)}")
             logger.error(f"❌ Fruit data: {fruit}")
@@ -566,7 +1052,10 @@ def convert_pipeline_result_to_database_format(
             "analysis_quality": pipeline_result.get('summary', {}).get('analysis_quality', 'good'),
             "average_confidence": pipeline_result.get('summary', {}).get('average_confidence', 0.0),
             "fruit_type_distribution": pipeline_result.get('summary', {}).get('fruit_type_distribution', {}),
-            "ripeness_distribution": pipeline_result.get('summary', {}).get('ripeness_distribution', {})
+            "ripeness_distribution": pipeline_result.get('summary', {}).get('ripeness_distribution', {}),
+            "disease_distribution": pipeline_result.get('summary', {}).get('disease_distribution', {}),
+            "total_diseased": sum(1 for d in detection_results if d.is_diseased),
+            "total_healthy": sum(1 for d in detection_results if d.is_diseased is False)
         },
         visualization_available='annotated_image' in pipeline_result,
         visualization_path=pipeline_result.get('visualization_path')
@@ -576,7 +1065,8 @@ def convert_pipeline_result_to_database_format(
     database_records = DatabaseRecords(
         images=image_records,
         detections=detection_records,
-        classifications=classification_records
+        classifications=classification_records,
+        disease_detections=disease_detection_records
     )
     
     return processing_result, database_records
