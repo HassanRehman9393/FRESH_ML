@@ -59,37 +59,62 @@ class FreshMLPredictor:
         logger.info(f"FRESH ML Predictor initialized on device: {self.device}")
     
     def _load_models(self):
-        """Load YOLO and classification models"""
+        """Load ML models (YOLO and classification are optional)"""
         try:
-            # Validate models exist
-            if not self.config.validate_models_exist():
-                raise FileNotFoundError("Model files not found. Please check model paths in config.")
+            # Load YOLO detector (optional)
+            try:
+                logger.info("Loading YOLO detection model...")
+                self.yolo_detector = YOLODetector(
+                    model_path=self.config.YOLO_MODEL_PATH,
+                    device=self.device,
+                    confidence_threshold=self.config.CONFIDENCE_THRESHOLD,
+                    iou_threshold=self.config.IOU_THRESHOLD
+                )
+                logger.info("✅ YOLO model loaded successfully")
+            except Exception as e:
+                logger.warning(f"⚠️  YOLO model not loaded: {str(e)}")
+                logger.warning("   Fruit detection endpoints will not be available")
+                self.yolo_detector = None
             
-            # Load YOLO detector
-            logger.info("Loading YOLO detection model...")
-            self.yolo_detector = YOLODetector(
-                model_path=self.config.YOLO_MODEL_PATH,
-                device=self.device,
-                confidence_threshold=self.config.CONFIDENCE_THRESHOLD,
-                iou_threshold=self.config.IOU_THRESHOLD
-            )
-            
-            # Load ripeness classifier
-            logger.info("Loading ripeness classification model...")
-            self.ripeness_classifier = RipenessClassifier(
-                model_path=self.config.CLASSIFICATION_MODEL_PATH,
-                device=self.device
-            )
+            # Load ripeness classifier (optional)
+            try:
+                logger.info("Loading ripeness classification model...")
+                self.ripeness_classifier = RipenessClassifier(
+                    model_path=self.config.CLASSIFICATION_MODEL_PATH,
+                    device=self.device
+                )
+                logger.info("✅ Classification model loaded successfully")
+            except Exception as e:
+                logger.warning(f"⚠️  Classification model not loaded: {str(e)}")
+                logger.warning("   Ripeness classification will not be available")
+                self.ripeness_classifier = None
             
             # Load disease detector (optional)
-            logger.info("Loading disease detection models...")
-            self.disease_detector = DiseaseDetector(
-                anthracnose_model_path=self.config.ANTHRACNOSE_MODEL_PATH,
-                citrus_canker_model_path=self.config.CITRUS_CANKER_MODEL_PATH,
-                device=self.device
-            )
+            try:
+                logger.info("Loading disease detection models...")
+                self.disease_detector = DiseaseDetector(
+                    anthracnose_model_path=self.config.ANTHRACNOSE_MODEL_PATH,
+                    citrus_canker_model_path=self.config.CITRUS_CANKER_MODEL_PATH,
+                    blackspot_model_path=self.config.BLACKSPOT_MODEL_PATH,
+                    fruitfly_model_path=self.config.GUAVA_FRUITFLY_MODEL_PATH,
+                    device=self.device
+                )
+                logger.info("✅ Disease detection models loaded")
+            except Exception as e:
+                logger.warning(f"⚠️  Disease detection models not loaded: {str(e)}")
+                self.disease_detector = None
             
-            logger.info("All models loaded successfully!")
+            # Check if at least one model loaded
+            models_loaded = [
+                self.yolo_detector is not None,
+                self.ripeness_classifier is not None,
+                self.disease_detector is not None
+            ]
+            
+            if not any(models_loaded):
+                raise RuntimeError("No models could be loaded! Please check model files.")
+            
+            logger.info(f"✅ Pipeline initialized with {sum(models_loaded)}/3 core models loaded")
             
         except Exception as e:
             logger.error(f"Error loading models: {str(e)}")
@@ -172,7 +197,7 @@ class FreshMLPredictor:
                 combined_result = {
                     **detection,
                     **ripeness_result,
-                    **disease_result
+                    'disease_detection': disease_result  # Nest disease results under this key
                 }
                 classification_results.append(combined_result)
             

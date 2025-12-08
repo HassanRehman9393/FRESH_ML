@@ -34,6 +34,16 @@ from .database_models import (
     DiseaseDetectionResult,
     DiseaseAnalysisResponse,
     
+    # Blackspot Detection Models
+    BlackspotDetectionRequest,
+    BlackspotDetectionResult,
+    BlackspotDetectionResponse,
+    
+    # Guava Fruitfly Detection Models
+    GuavaFruitflyDetectionRequest,
+    GuavaFruitflyDetectionResult,
+    GuavaFruitflyDetectionResponse,
+    
     # Batch Processing
     BatchStatusResponse,
     BatchProcessingStatus,
@@ -90,6 +100,16 @@ __all__ = [
     
     # Error Models
     "APIError",
+    
+    # Blackspot Detection
+    "BlackspotDetectionRequest",
+    "BlackspotDetectionResult",
+    "BlackspotDetectionResponse",
+    
+    # Guava Fruitfly Detection
+    "GuavaFruitflyDetectionRequest",
+    "GuavaFruitflyDetectionResult",
+    "GuavaFruitflyDetectionResponse",
     
     # Legacy aliases
     "BoundingBox",

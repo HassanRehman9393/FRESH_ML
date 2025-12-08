@@ -29,14 +29,15 @@ class PipelineConfig:
             if model_path and os.path.exists(model_path):
                 return model_path
         except Exception as e:
-            print(f"⚠️  Failed to get YOLO model from DO Spaces: {e}")
+            pass  # Silently fail, will try local
         
         # Fallback to local
         local_path = "models/yolo_detection_best.pt"
         if os.path.exists(local_path):
             return local_path
         
-        raise FileNotFoundError("YOLO model not found in DO Spaces or locally")
+        # Return None instead of raising error (optional model)
+        return None
     
     @property
     def CLASSIFICATION_MODEL_PATH(self) -> str:
@@ -51,14 +52,15 @@ class PipelineConfig:
             if model_path and os.path.exists(model_path):
                 return model_path
         except Exception as e:
-            print(f"⚠️  Failed to get classification model from DO Spaces: {e}")
+            pass  # Silently fail, will try local
         
         # Fallback to local
         local_path = "models/classification_best_fixed.pth"
         if os.path.exists(local_path):
             return local_path
         
-        raise FileNotFoundError("Classification model not found in DO Spaces or locally")
+        # Return None instead of raising error (optional model)
+        return None
     
     @property
     def ANTHRACNOSE_MODEL_PATH(self) -> str:
@@ -99,6 +101,50 @@ class PipelineConfig:
         
         # Fallback to local
         local_path = "models/citrus_canker_detection_model.pth"
+        if os.path.exists(local_path):
+            return local_path
+        
+        return None  # Optional model
+    
+    @property
+    def BLACKSPOT_MODEL_PATH(self) -> str:
+        """Get Citrus Blackspot disease detection model path from DO Spaces"""
+        try:
+            import sys
+            import os
+            sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+            from pipeline.utils.do_spaces_model_manager import get_model_path
+            
+            model_path = get_model_path("citrus_blackspot_detection_model.pth")
+            if model_path and os.path.exists(model_path):
+                return model_path
+        except Exception as e:
+            print(f"⚠️  Failed to get Citrus Blackspot model from DO Spaces: {e}")
+        
+        # Fallback to local
+        local_path = "models/citrus_blackspot_detection_model.pth"
+        if os.path.exists(local_path):
+            return local_path
+        
+        return None  # Optional model
+    
+    @property
+    def GUAVA_FRUITFLY_MODEL_PATH(self) -> str:
+        """Get guava fruitfly model path from DO Spaces"""
+        try:
+            import sys
+            import os
+            sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+            from pipeline.utils.do_spaces_model_manager import get_model_path
+            
+            model_path = get_model_path("guava_fruitfly_detection_model.pth")
+            if model_path and os.path.exists(model_path):
+                return model_path
+        except Exception as e:
+            print(f"⚠️  Failed to get Guava Fruitfly model from DO Spaces: {e}")
+        
+        # Fallback to local
+        local_path = "models/guava_fruitfly_detection_model.pth"
         if os.path.exists(local_path):
             return local_path
         
@@ -147,19 +193,45 @@ class PipelineConfig:
         return ripeness_map.get(fruit_type, ["unknown"])
     
     def validate_models_exist(self) -> bool:
-        """Check if model files exist"""
-        yolo_exists = os.path.exists(self.YOLO_MODEL_PATH)
-        classification_exists = os.path.exists(self.CLASSIFICATION_MODEL_PATH)
-        
-        # Disease models are optional
+        """Check if at least one model file exists (all are optional now)"""
+        yolo_exists = self.YOLO_MODEL_PATH and os.path.exists(self.YOLO_MODEL_PATH)
+        classification_exists = self.CLASSIFICATION_MODEL_PATH and os.path.exists(self.CLASSIFICATION_MODEL_PATH)
         anthracnose_exists = self.ANTHRACNOSE_MODEL_PATH and os.path.exists(self.ANTHRACNOSE_MODEL_PATH)
         citrus_canker_exists = self.CITRUS_CANKER_MODEL_PATH and os.path.exists(self.CITRUS_CANKER_MODEL_PATH)
+        blackspot_exists = self.BLACKSPOT_MODEL_PATH and os.path.exists(self.BLACKSPOT_MODEL_PATH)
+        fruitfly_exists = self.GUAVA_FRUITFLY_MODEL_PATH and os.path.exists(self.GUAVA_FRUITFLY_MODEL_PATH)
         
-        # Log disease model status
+        # Log model status
+        if not yolo_exists:
+            print("⚠️  YOLO detection model not found (optional)")
+        else:
+            print("✅ YOLO detection model loaded successfully")
+            
+        if not classification_exists:
+            print("⚠️  Classification model not found (optional)")
+        else:
+            print("✅ Classification model loaded successfully")
+            
         if not anthracnose_exists:
             print("⚠️  Anthracnose detection model not found (optional)")
+        else:
+            print("✅ Anthracnose detection model loaded successfully")
+            
         if not citrus_canker_exists:
             print("⚠️  Citrus Canker detection model not found (optional)")
+        else:
+            print("✅ Citrus Canker detection model loaded successfully")
+            
+        if not blackspot_exists:
+            print("⚠️  Citrus Blackspot detection model not found (optional)")
+        else:
+            print("✅ Citrus Blackspot detection model loaded successfully")
         
-        # Only require YOLO and classification models
-        return yolo_exists and classification_exists
+        if not fruitfly_exists:
+            print("⚠️  Guava Fruitfly detection model not found (optional)")
+        else:
+            print("✅ Guava Fruitfly detection model loaded successfully")
+        
+        # At least one model must exist
+        models_found = [yolo_exists, classification_exists, anthracnose_exists, citrus_canker_exists, blackspot_exists, fruitfly_exists]
+        return any(models_found)

@@ -1,0 +1,38 @@
+======================================================================
+CITRUS BLACK SPOT CLASSIFICATION DATASET
+======================================================================
+
+📊 Dataset Statistics:
+----------------------------------------------------------------------
+
+Total Images: 2,922
+  - Healthy: 1,461 (50.0%)
+  - Blackspot: 1,461 (50.0%)
+
+Split Distribution:
+----------------------------------------------------------------------
+
+TRAIN:
+  Total: 2,044 images (70.0%)
+  - Healthy: 1,022 (50.0%)
+  - Blackspot: 1,022 (50.0%)
+
+VAL:
+  Total: 438 images (15.0%)
+  - Healthy: 219 (50.0%)
+  - Blackspot: 219 (50.0%)
+
+TEST:
+  Total: 440 images (15.1%)
+  - Healthy: 220 (50.0%)
+  - Blackspot: 220 (50.0%)
+
+======================================================================
+✅ DATASET READY FOR TRAINING!
+======================================================================
+
+Next Steps:
+1. Compress dataset: Compress-Archive -Path 'data\citrus_blackspot_classification' -DestinationPath 'citrus_blackspot_classification.zip'
+2. Upload to Kaggle as new dataset
+3. Name it: citrus-blackspot-classification
+4. Run the training notebook on Kaggle
