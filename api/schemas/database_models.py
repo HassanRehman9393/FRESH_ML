@@ -151,6 +151,7 @@ class ImageProcessingResult(BaseModel):
     # Visualization (optional)
     visualization_available: bool = Field(False, description="Whether visualization image is available")
     visualization_path: Optional[str] = Field(None, description="Path to visualization image if saved")
+    visualization_base64: Optional[str] = Field(None, description="Base64 encoded annotated image with bounding boxes")
 
 class FruitDetectionResponse(BaseModel):
     """Main API response (backend-friendly)"""

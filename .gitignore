@@ -65,7 +65,7 @@ ENV/
 env/
 .env
 
-
+.github
 
 # Machine Learning
 # Tensorboard logs

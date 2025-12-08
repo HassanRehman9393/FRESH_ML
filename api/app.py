@@ -1039,6 +1039,18 @@ def convert_pipeline_result_to_database_format(
             logger.error(f"❌ Fruit data: {fruit}")
             raise fruit_error
     
+    # Convert annotated image to base64 if available
+    visualization_base64 = None
+    if 'annotated_image' in pipeline_result:
+        try:
+            annotated_img = pipeline_result['annotated_image']
+            # Encode image to base64
+            _, buffer = cv2.imencode('.jpg', annotated_img)
+            visualization_base64 = base64.b64encode(buffer).decode('utf-8')
+            logger.info("✅ Bounding box visualization encoded to base64")
+        except Exception as e:
+            logger.error(f"❌ Failed to encode visualization: {str(e)}")
+    
     # Create image processing result
     processing_result = ImageProcessingResult(
         image_metadata={
@@ -1058,7 +1070,8 @@ def convert_pipeline_result_to_database_format(
             "total_healthy": sum(1 for d in detection_results if d.is_diseased is False)
         },
         visualization_available='annotated_image' in pipeline_result,
-        visualization_path=pipeline_result.get('visualization_path')
+        visualization_path=pipeline_result.get('visualization_path'),
+        visualization_base64=visualization_base64
     )
     
     # Create database records container
