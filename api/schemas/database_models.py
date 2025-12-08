@@ -26,6 +26,8 @@ class DiseaseType(str, Enum):
     HEALTHY = "healthy"
     ANTHRACNOSE = "anthracnose"
     CITRUS_CANKER = "citrus_canker"
+    BLACKSPOT = "blackspot"
+    FRUITFLY = "fruitfly"
     UNKNOWN = "unknown"
 
 # Severity levels for disease
@@ -219,7 +221,44 @@ class ModelInfo(BaseModel):
     iou_threshold: float = Field(..., description="IOU threshold for detection")
     supported_fruits: List[str] = Field(..., description="List of supported fruit types")
     supported_ripeness_levels: List[str] = Field(..., description="List of supported ripeness levels")
-    supported_disease_types: List[str] = Field(default_factory=lambda: ["healthy", "anthracnose", "citrus_canker"], description="List of supported disease types")
+    supported_disease_types: List[str] = Field(default_factory=lambda: ["healthy", "anthracnose", "citrus_canker", "blackspot"], description="List of supported disease types")
+
+# Citrus Blackspot Detection Models
+class BlackspotDetectionRequest(BaseModel):
+    """Request for citrus blackspot detection"""
+    user_id: Optional[str] = Field(None, description="User UUID (optional for testing)")
+    return_probabilities: bool = Field(True, description="Return class probabilities")
+    confidence_threshold: Optional[float] = Field(0.7, ge=0.0, le=1.0, description="Confidence threshold for positive detection")
+
+class BlackspotDetectionResult(BaseModel):
+    """Citrus blackspot detection result"""
+    success: bool = Field(..., description="Detection success status")
+    disease_detected: bool = Field(..., description="Whether black spot disease is detected")
+    prediction: str = Field(..., description="Prediction class (blackspot or healthy)")
+    display_name: str = Field(..., description="User-friendly prediction name")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Prediction confidence (0-1)")
+    is_high_confidence: bool = Field(..., description="Whether confidence exceeds threshold")
+    probabilities: Optional[Dict[str, float]] = Field(None, description="Class probabilities")
+    severity: str = Field(..., description="Disease severity level")
+    severity_description: str = Field(..., description="Severity description")
+
+class BlackspotDetectionResponse(BaseModel):
+    """Response for citrus blackspot detection"""
+    success: bool = Field(..., description="Overall processing success")
+    timestamp: datetime = Field(..., description="Processing timestamp")
+    processing_time: str = Field(..., description="Processing duration")
+    user_id: str = Field(..., description="User UUID")
+    filename: str = Field(..., description="Image filename")
+    
+    # Detection result
+    result: BlackspotDetectionResult = Field(..., description="Detection result")
+    
+    # Model info
+    model_info: Dict[str, Any] = Field(..., description="Model information")
+    
+    # Optional fields
+    error: Optional[str] = Field(None, description="Error message if failed")
+    recommendations: Optional[List[str]] = Field(None, description="Treatment recommendations")
 
 # Disease Detection Response Models
 class DiseaseDetectionResult(BaseModel):
@@ -266,4 +305,44 @@ class APIError(BaseModel):
     message: str = Field(..., description="Error message")
     details: Optional[Dict[str, Any]] = Field(None, description="Additional error details")
     timestamp: datetime = Field(..., description="Error timestamp")
+
+# Guava Fruitfly Detection Schemas
+class GuavaFruitflyDetectionRequest(BaseModel):
+    """Request model for guava fruitfly disease detection"""
+    user_id: Optional[str] = Field(None, description="User UUID (optional)")
+    return_probabilities: bool = Field(default=True, description="Return class probabilities")
+    confidence_threshold: float = Field(default=0.7, ge=0.0, le=1.0, description="Confidence threshold")
+
+class GuavaFruitflyDetectionResult(BaseModel):
+    """Detection result for a single guava"""
+    success: bool = Field(..., description="Detection success")
+    disease_detected: bool = Field(..., description="Whether fruitfly disease was detected")
+    prediction: str = Field(..., description="Predicted class (fruitfly or healthy)")
+    display_name: str = Field(..., description="Display name for prediction")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Prediction confidence")
+    is_high_confidence: bool = Field(..., description="Whether confidence is high (>= 0.9)")
+    probabilities: Optional[Dict[str, float]] = Field(None, description="Class probabilities")
+    severity: str = Field(..., description="Disease severity level")
+    severity_description: str = Field(..., description="Description of severity")
+
+class GuavaFruitflyDetectionResponse(BaseModel):
+    """Complete response for guava fruitfly detection"""
+    success: bool = Field(..., description="Processing success status")
+    timestamp: datetime = Field(default_factory=datetime.now, description="Processing timestamp")
+    processing_time: Optional[str] = Field(None, description="Total processing time")
+    user_id: str = Field(..., description="User UUID")
+    filename: str = Field(..., description="Image filename")
+    
+    # Detection result
+    result: GuavaFruitflyDetectionResult = Field(..., description="Detection result")
+    
+    # Model information
+    model_info: Optional[Dict[str, Any]] = Field(None, description="Model metadata")
+    
+    # Recommendations
+    recommendations: Optional[List[str]] = Field(None, description="Treatment/action recommendations")
+    
+    # Error handling
+    error: Optional[str] = Field(None, description="Error message if any")
+
     user_id: Optional[str] = Field(None, description="User UUID if available")

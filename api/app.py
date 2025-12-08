@@ -48,7 +48,13 @@ from api.schemas.models import (
     DiseaseType,
     DiseaseSeverity,
     DiseaseDetectionResult,
-    DiseaseAnalysisResponse
+    DiseaseAnalysisResponse,
+    BlackspotDetectionRequest,
+    BlackspotDetectionResult,
+    BlackspotDetectionResponse,
+    GuavaFruitflyDetectionRequest,
+    GuavaFruitflyDetectionResult,
+    GuavaFruitflyDetectionResponse
 )
 from datetime import datetime
 import uuid as uuid_lib
@@ -375,9 +381,15 @@ async def root():
             "/api/detection/fruits": "Single image detection (file upload)",
             "/api/detection/fruits/base64": "Single image detection (base64)",
             "/api/detection/fruits/batch": "Batch image processing",
-            "/api/disease/detect": "Disease detection (file upload)",
-            "/api/disease/detect/base64": "Disease detection (base64)",
+            "/api/disease/detect": "Unified disease detection for all fruits (file upload) - Supports: Anthracnose, Citrus Canker, Black Spot, Fruitfly",
+            "/api/disease/detect/base64": "Unified disease detection for all fruits (base64) - Supports: Anthracnose, Citrus Canker, Black Spot, Fruitfly",
             "/docs": "API documentation"
+        },
+        "supported_diseases": {
+            "mango": ["anthracnose"],
+            "orange": ["blackspot", "citrus_canker"],
+            "grapefruit": ["citrus_canker"],
+            "guava": ["fruitfly"]
         }
     }
 
@@ -390,19 +402,57 @@ async def detect_disease_upload(
     confidence_threshold: float = 0.7
 ):
     """
-    Detect diseases in fruit image - Direct disease analysis
+    **Unified Disease Detection for All Fruits**
     
-    This endpoint analyzes the entire image for disease without requiring YOLO detection.
-    If fruit_type is not specified, it will try to detect fruits first.
+    This endpoint analyzes fruit images for diseases using specialized models:
+    - **Mango**: Anthracnose detection (ResNet-50)
+    - **Orange**: Black Spot detection (DenseNet-121) - Primary
+    - **Orange**: Citrus Canker detection (DenseNet-121) - Fallback
+    - **Grapefruit**: Citrus Canker detection (DenseNet-121)
+    - **Guava**: Fruitfly detection (DenseNet-121)
+    
+    **Automatic Routing**: The system automatically selects the appropriate disease model
+    based on the detected or specified fruit type.
+    
+    **Detection Modes**:
+    1. **Direct Analysis** (fruit_type provided): Analyzes entire image for specified fruit disease
+    2. **Full Pipeline** (fruit_type not provided): Detects fruits first, then checks each for disease
     
     Args:
-        file: Uploaded image file (JPEG, PNG, BMP)
-        user_id: User UUID for database association
-        fruit_type: Fruit type hint (mango, orange, grapefruit) - optional
+        file: Uploaded image file (JPEG, PNG, BMP) - max 50MB
+        user_id: User UUID for database association (optional, defaults to test user)
+        fruit_type: Fruit type hint ('mango', 'orange', 'grapefruit', 'guava') - optional
         confidence_threshold: Disease confidence threshold (default: 0.7)
     
     Returns:
-        Disease detection analysis (focused on disease information only)
+        Comprehensive disease analysis with:
+        - Disease detection results for each fruit
+        - Confidence scores and probabilities
+        - Treatment recommendations
+        - Disease distribution statistics
+    
+    **Supported Diseases**:
+    - Anthracnose (Mango) - Accuracy: 90%+
+    - Citrus Canker (Orange/Grapefruit) - Accuracy: 88%+
+    - Black Spot (Orange) - Accuracy: 85-93%
+    - Fruitfly (Guava) - Accuracy: 90-95%
+    
+    **Example Usage**:
+    ```python
+    import requests
+    
+    # Direct analysis with fruit type hint
+    with open('mango.jpg', 'rb') as f:
+        response = requests.post(
+            'http://localhost:8000/api/disease/detect',
+            files={'file': f},
+            data={'fruit_type': 'mango', 'confidence_threshold': 0.7}
+        )
+    
+    result = response.json()
+    print(f"Disease Detected: {result['disease_detected']}")
+    print(f"Results: {result['disease_results']}")
+    ```
     """
     if predictor is None:
         raise HTTPException(status_code=503, detail="Models not loaded")
@@ -505,12 +555,8 @@ async def detect_disease_upload(
                         if disease_result and disease_result.get('confidence', 0) >= confidence_threshold:
                             disease_type_str = disease_result.get('disease', 'unknown')
                             
-                            # Map to enum
-                            disease_type_enum = DiseaseType.HEALTHY
-                            if disease_type_str == 'anthracnose':
-                                disease_type_enum = DiseaseType.ANTHRACNOSE
-                            elif disease_type_str == 'citrus_canker':
-                                disease_type_enum = DiseaseType.CITRUS_CANKER
+                            # Map to enum using helper function
+                            disease_type_enum = _map_disease_to_enum(disease_type_str)
                             
                             disease_results.append(DiseaseDetectionResult(
                                 disease_type=disease_type_enum,
@@ -538,13 +584,8 @@ async def detect_disease_upload(
                         logger.info(f"🔍 Fruit disease data: {disease_type_str} (confidence: {confidence:.2f})")
                         
                         if confidence >= confidence_threshold:
-                            disease_type_enum = DiseaseType.HEALTHY
-                            if disease_type_str == 'anthracnose':
-                                disease_type_enum = DiseaseType.ANTHRACNOSE
-                            elif disease_type_str == 'citrus_canker':
-                                disease_type_enum = DiseaseType.CITRUS_CANKER
-                            elif disease_type_str == 'unknown':
-                                disease_type_enum = DiseaseType.UNKNOWN
+                            # Map to enum using helper function
+                            disease_type_enum = _map_disease_to_enum(disease_type_str)
                             
                             disease_results.append(DiseaseDetectionResult(
                                 disease_type=disease_type_enum,
@@ -608,17 +649,22 @@ async def detect_disease_upload(
 @app.post("/api/disease/detect/base64", response_model=DiseaseAnalysisResponse)
 async def detect_disease_base64(request: SingleImageDetectionRequest, fruit_type: str = None):
     """
-    Detect diseases in fruit from base64 encoded image - Direct disease analysis
+    **Unified Disease Detection for All Fruits (Base64)**
     
-    This endpoint analyzes the image for disease without requiring YOLO detection.
-    If fruit_type is not specified, it will try to detect fruits first.
+    Same as /api/disease/detect but accepts base64 encoded images.
+    
+    This endpoint analyzes fruit images for diseases using specialized models:
+    - **Mango**: Anthracnose detection
+    - **Orange**: Black Spot / Citrus Canker detection
+    - **Grapefruit**: Citrus Canker detection
+    - **Guava**: Fruitfly detection
     
     Args:
         request: Request containing base64 encoded image
-        fruit_type: Fruit type hint (mango, orange, grapefruit) - optional
+        fruit_type: Fruit type hint ('mango', 'orange', 'grapefruit', 'guava') - optional
     
     Returns:
-        Disease detection analysis (focused on disease information only)
+        Comprehensive disease analysis with detection results, confidence scores, and recommendations
     """
     if predictor is None:
         raise HTTPException(status_code=503, detail="Models not loaded")
@@ -706,11 +752,8 @@ async def detect_disease_base64(request: SingleImageDetectionRequest, fruit_type
                         if disease_result and disease_result.get('confidence', 0) >= confidence_threshold:
                             disease_type_str = disease_result.get('disease', 'unknown')
                             
-                            disease_type_enum = DiseaseType.HEALTHY
-                            if disease_type_str == 'anthracnose':
-                                disease_type_enum = DiseaseType.ANTHRACNOSE
-                            elif disease_type_str == 'citrus_canker':
-                                disease_type_enum = DiseaseType.CITRUS_CANKER
+                            # Map to enum using helper function
+                            disease_type_enum = _map_disease_to_enum(disease_type_str)
                             
                             disease_results.append(DiseaseDetectionResult(
                                 disease_type=disease_type_enum,
@@ -738,13 +781,8 @@ async def detect_disease_base64(request: SingleImageDetectionRequest, fruit_type
                         logger.info(f"🔍 Fruit disease data: {disease_type_str} (confidence: {confidence:.2f})")
                         
                         if confidence >= confidence_threshold:
-                            disease_type_enum = DiseaseType.HEALTHY
-                            if disease_type_str == 'anthracnose':
-                                disease_type_enum = DiseaseType.ANTHRACNOSE
-                            elif disease_type_str == 'citrus_canker':
-                                disease_type_enum = DiseaseType.CITRUS_CANKER
-                            elif disease_type_str == 'unknown':
-                                disease_type_enum = DiseaseType.UNKNOWN
+                            # Map to enum using helper function
+                            disease_type_enum = _map_disease_to_enum(disease_type_str)
                             
                             disease_results.append(DiseaseDetectionResult(
                                 disease_type=disease_type_enum,
@@ -816,6 +854,22 @@ def _get_disease_recommendations(disease_type: str) -> List[str]:
             "Disinfect pruning tools between cuts",
             "Quarantine affected trees if possible"
         ],
+        'blackspot': [
+            "Remove and destroy infected fruits to prevent spread",
+            "Apply appropriate fungicides (consult local extension service)",
+            "Prune infected branches and improve air circulation",
+            "Avoid overhead watering to reduce leaf wetness",
+            "Practice crop rotation and maintain tree health",
+            "Monitor regularly for early detection"
+        ],
+        'fruitfly': [
+            "Remove and destroy infected fruits immediately to prevent spread",
+            "Use pheromone traps to monitor and control fruitfly population",
+            "Apply approved insecticides during peak fruitfly activity",
+            "Maintain orchard sanitation by removing fallen fruits",
+            "Harvest fruits early and use hot water treatment if needed",
+            "Consult agricultural extension for region-specific control measures"
+        ],
         'healthy': [
             "Continue regular monitoring",
             "Maintain proper nutrition and irrigation",
@@ -823,6 +877,20 @@ def _get_disease_recommendations(disease_type: str) -> List[str]:
         ]
     }
     return recommendations.get(disease_type, ["Consult agricultural extension service for specific recommendations"])
+
+
+def _map_disease_to_enum(disease_str: str) -> DiseaseType:
+    """Map disease string to DiseaseType enum"""
+    disease_map = {
+        'anthracnose': DiseaseType.ANTHRACNOSE,
+        'citrus_canker': DiseaseType.CITRUS_CANKER,
+        'blackspot': DiseaseType.BLACKSPOT,
+        'fruitfly': DiseaseType.FRUITFLY,
+        'healthy': DiseaseType.HEALTHY,
+        'unknown': DiseaseType.UNKNOWN
+    }
+    return disease_map.get(disease_str.lower(), DiseaseType.UNKNOWN)
+
 
 # Helper functions
 def convert_pipeline_result_to_database_format(
