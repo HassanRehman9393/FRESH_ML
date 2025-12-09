@@ -11,13 +11,14 @@ __pycache__/
 .Python
 .pytest_cache/
 
-# Data and models (not needed in container)
+# Data and models (not needed in container - downloaded from DigitalOcean at runtime)
 data/
 models/
 models_cache/
 archive/
 notebooks/
 test_images/
+scripts/
 
 # Documentation and development files
 README.md
