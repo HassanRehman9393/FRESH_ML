@@ -509,16 +509,24 @@ async def detect_disease_upload(
                     return_probabilities=True
                 )
                 
+                logger.info(f"📊 Disease detection result: {disease_result}")
+                
                 if disease_result and disease_result.get('confidence', 0) >= confidence_threshold:
+                    # Use 'disease' field for mapping, not 'disease_type'
+                    disease_str = disease_result.get('disease', 'unknown')
+                    disease_type_enum = _map_disease_to_enum(disease_str)
+                    
                     disease_results.append(DiseaseDetectionResult(
-                        disease_type=DiseaseType(disease_result.get('disease_type', 'unknown')),
+                        disease_type=disease_type_enum,
                         is_diseased=disease_result.get('is_diseased', False),
                         confidence=disease_result.get('confidence', 0.0),
                         severity=None,  # Future enhancement
                         probabilities=disease_result.get('probabilities'),
                         affected_area_percentage=None,
-                        recommendations=_get_disease_recommendations(disease_result.get('disease_type'))
+                        recommendations=_get_disease_recommendations(disease_str)
                     ))
+                else:
+                    logger.info(f"⚠️ Disease confidence {disease_result.get('confidence', 0):.2f} below threshold {confidence_threshold}")
                     
             except Exception as e:
                 logger.error(f"Direct disease detection failed: {e}")
@@ -540,38 +548,9 @@ async def detect_disease_upload(
             fruits_found = pipeline_result.get('fruits', [])
             
             if not fruits_found:
-                logger.warning("⚠️ No fruits detected by YOLO. Attempting direct whole-image analysis...")
-                # Try to infer fruit type from image and analyze directly
-                # Attempt with common fruit types
-                for try_fruit_type in ['mango', 'orange']:
-                    try:
-                        logger.info(f"🎯 Attempting direct analysis as {try_fruit_type}...")
-                        disease_result = predictor.disease_detector.detect_disease(
-                            image=image,
-                            fruit_type=try_fruit_type,
-                            return_probabilities=True
-                        )
-                        
-                        if disease_result and disease_result.get('confidence', 0) >= confidence_threshold:
-                            disease_type_str = disease_result.get('disease', 'unknown')
-                            
-                            # Map to enum using helper function
-                            disease_type_enum = _map_disease_to_enum(disease_type_str)
-                            
-                            disease_results.append(DiseaseDetectionResult(
-                                disease_type=disease_type_enum,
-                                is_diseased=disease_result.get('is_diseased', False),
-                                confidence=disease_result.get('confidence', 0.0),
-                                severity=None,
-                                probabilities=disease_result.get('probabilities'),
-                                affected_area_percentage=None,
-                                recommendations=_get_disease_recommendations(disease_type_str)
-                            ))
-                            logger.info(f"✅ Disease detected via direct analysis: {disease_type_str} ({disease_result.get('confidence', 0):.2f})")
-                            break  # Found disease, no need to try other fruit types
-                    except Exception as e:
-                        logger.warning(f"Direct analysis as {try_fruit_type} failed: {e}")
-                        continue
+                logger.warning("⚠️ No fruits detected by YOLO. Cannot perform disease detection without fruit type.")
+                logger.info("💡 Please provide 'fruit_type' parameter for direct disease analysis without YOLO detection.")
+                errors.append("No fruits detected. Provide fruit_type parameter for direct analysis.")
             else:
                 # Extract disease results from detected fruits
                 for fruit in fruits_found:
@@ -707,16 +686,24 @@ async def detect_disease_base64(request: SingleImageDetectionRequest, fruit_type
                     return_probabilities=True
                 )
                 
+                logger.info(f"📊 Disease detection result: {disease_result}")
+                
                 if disease_result and disease_result.get('confidence', 0) >= confidence_threshold:
+                    # Use 'disease' field for mapping, not 'disease_type'
+                    disease_str = disease_result.get('disease', 'unknown')
+                    disease_type_enum = _map_disease_to_enum(disease_str)
+                    
                     disease_results.append(DiseaseDetectionResult(
-                        disease_type=DiseaseType(disease_result.get('disease_type', 'unknown')),
+                        disease_type=disease_type_enum,
                         is_diseased=disease_result.get('is_diseased', False),
                         confidence=disease_result.get('confidence', 0.0),
                         severity=None,
                         probabilities=disease_result.get('probabilities'),
                         affected_area_percentage=None,
-                        recommendations=_get_disease_recommendations(disease_result.get('disease_type'))
+                        recommendations=_get_disease_recommendations(disease_str)
                     ))
+                else:
+                    logger.info(f"⚠️ Disease confidence {disease_result.get('confidence', 0):.2f} below threshold {confidence_threshold}")
                     
             except Exception as e:
                 logger.error(f"Direct disease detection failed: {e}")
@@ -738,37 +725,9 @@ async def detect_disease_base64(request: SingleImageDetectionRequest, fruit_type
             fruits_found = pipeline_result.get('fruits', [])
             
             if not fruits_found:
-                logger.warning("⚠️ No fruits detected by YOLO. Attempting direct whole-image analysis...")
-                # Try to infer fruit type from image and analyze directly
-                for try_fruit_type in ['mango', 'orange']:
-                    try:
-                        logger.info(f"🎯 Attempting direct analysis as {try_fruit_type}...")
-                        disease_result = predictor.disease_detector.detect_disease(
-                            image=image,
-                            fruit_type=try_fruit_type,
-                            return_probabilities=True
-                        )
-                        
-                        if disease_result and disease_result.get('confidence', 0) >= confidence_threshold:
-                            disease_type_str = disease_result.get('disease', 'unknown')
-                            
-                            # Map to enum using helper function
-                            disease_type_enum = _map_disease_to_enum(disease_type_str)
-                            
-                            disease_results.append(DiseaseDetectionResult(
-                                disease_type=disease_type_enum,
-                                is_diseased=disease_result.get('is_diseased', False),
-                                confidence=disease_result.get('confidence', 0.0),
-                                severity=None,
-                                probabilities=disease_result.get('probabilities'),
-                                affected_area_percentage=None,
-                                recommendations=_get_disease_recommendations(disease_type_str)
-                            ))
-                            logger.info(f"✅ Disease detected via direct analysis: {disease_type_str}")
-                            break
-                    except Exception as e:
-                        logger.warning(f"Direct analysis as {try_fruit_type} failed: {e}")
-                        continue
+                logger.warning("⚠️ No fruits detected by YOLO. Cannot perform disease detection without fruit type.")
+                logger.info("💡 Please provide 'fruit_type' parameter for direct disease analysis without YOLO detection.")
+                errors.append("No fruits detected. Provide fruit_type parameter for direct analysis.")
             else:
                 # Extract disease results from detected fruits
                 for fruit in fruits_found:
