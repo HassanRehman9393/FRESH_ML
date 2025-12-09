@@ -1,8 +1,9 @@
 # FRESH ML - Absolute Minimal Production Requirements
 
 # Core ML (CPU-only for smaller size)  
-torch --index-url https://download.pytorch.org/whl/cpu
-torchvision --index-url https://download.pytorch.org/whl/cpu
+# Installed separately via pip with --index-url in Dockerfile
+# torch
+# torchvision
 ultralytics
 
 # Essential Libraries
