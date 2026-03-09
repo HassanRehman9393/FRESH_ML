@@ -43,12 +43,13 @@ class YOLODetector:
         self.confidence_threshold = confidence_threshold
         self.iou_threshold = iou_threshold
         
-        # Fruit class mapping (based on your training)
+        # Fruit class mapping (YOLOv11s model - trained March 2026)
+        # Matches fruit-detection.v2i.yolov11 dataset class IDs
         self.class_names = {
-            0: "mango",
-            1: "orange", 
-            2: "guava",
-            3: "grapefruit"
+            0: "grapefruit",
+            1: "guava",
+            2: "mango",
+            3: "orange"
         }
         
         # Load model

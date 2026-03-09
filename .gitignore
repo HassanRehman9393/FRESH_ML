@@ -17,13 +17,27 @@ deepfruits-mango-xs1as-goqi.v2i.yolov8-obb/
 archive/
 GrapeFruitsdetetction 2.v4i.yolov8-obb/
 UTA_CSE_Dataset/
+
+# YOLO Training Dataset (Roboflow)
+fruit-detection.v2i.yolov11/
+*.v*i.yolov*/
+
 # Organized dataset folders
 data/unified/
 data/raw/
 data/processed/
 Anthracnose/ 
-data/unified/anthracnose/ 
-# Model files
+data/unified/anthracnose/
+
+# Training Results & Outputs
+yolo11s_training/
+yolo*_training/
+training_output/
+runs/
+results/
+weights/
+
+# Model files (downloaded from DO Spaces, not versioned)
 *.h5
 *.pt
 *.pth
@@ -32,6 +46,10 @@ data/unified/anthracnose/
 *.pb
 models/
 models_cache/
+
+# Dataset Analysis (generated files)
+dataset_analysis.txt
+*.analysis.txt
 
 # Python
 __pycache__/
@@ -85,19 +103,56 @@ experiments/
 checkpoints/
 outputs/
 
-# Data processing
-*.csv
-*.json
+# Data processing (exclude generated files, keep config files)
 *.parquet
 *.feather
 *.pickle
 *.pkl
+results.csv
+*_results.csv
+
+# Configuration files (KEEP these)
+!requirements.txt
+!package.json
+!models_manifest.json
+!data.yaml
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+*.ipynb_checkpoints/
 
 # IDE and Editor
 .vscode/
 .idea/
 *.swp
 *.swo
+
+# OS specific
+.DS_Store
+Thumbs.db
+*.tmp
+
+# Zip archives (datasets and backups)
+*.zip
+*.tar.gz
+*.rar
+
+# Test images (if large quantities)
+test_images/*.jpg
+test_images/*.png
+# Keep a few test images for CI
+!test_images/sample_*.jpg
+!test_images/sample_*.png
+
+# Documentation (KEEP important docs)
+!README.md
+!PRD.md
+!*.md
+
+# Temporary scripts (analysis/verification)
+analyze_*.py
+verify_*.py
+check_*.py
 *~
 
 # OS

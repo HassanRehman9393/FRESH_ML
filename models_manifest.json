@@ -1,0 +1,83 @@
+{
+  "bucket_name": "fresh-ml-models",
+  "upload_timestamp": "2026-03-08T03:20:00.000000",
+  "models": {
+    "yolo_detection_best.pt": {
+      "version": "2.0",
+      "architecture": "YOLOv11s",
+      "description": "YOLOv11s fruit detection model - Production v2",
+      "storage_path": "models/yolo_detection_best.pt",
+      "size_bytes": 19171034,
+      "size_mb": 18.29,
+      "hash": "pending_upload",
+      "uploaded_at": "pending",
+      "public_url": "pending",
+      "training_details": {
+        "trained_date": "2026-03-07",
+        "training_epochs": 147,
+        "best_epoch": 122,
+        "dataset": "fruit-detection.v2i.yolov11",
+        "total_images": 3950,
+        "performance": {
+          "mAP@0.5": 0.791,
+          "mAP@0.5:0.95": 0.554
+        },
+        "per_class_performance": {
+          "grapefruit": {"mAP@0.5": 0.780},
+          "guava": {"mAP@0.5": 0.652},
+          "mango": {"mAP@0.5": 0.967},
+          "orange": {"mAP@0.5": 0.764}
+        }
+      },
+      "class_mapping": {
+        "0": "grapefruit",
+        "1": "guava",
+        "2": "mango",
+        "3": "orange"
+      },
+      "notes": "Migrated from old model. Upload to DO Spaces pending. Training notebook: notebooks/yolo_fruit_detection_training_v2_production.ipynb"
+    },
+    "classification_best_fixed.pth": {
+      "version": "1.0",
+      "architecture": "ResNet50",
+      "description": "Fruit ripeness classification model",
+      "storage_path": "models/classification_best_fixed.pth",
+      "size_bytes": 94000000,
+      "size_mb": 89.64,
+      "class_mapping": {
+        "0": "unripe",
+        "1": "ripe",
+        "2": "overripe"
+      },
+      "notes": "Fixed class mapping model for ripeness classification"
+    },
+    "anthracnose_detection_model.pth": {
+      "version": "1.0",
+      "architecture": "ResNet50",
+      "description": "Mango anthracnose disease detection",
+      "storage_path": "models/anthracnose_detection_model.pth",
+      "notes": "Trained for mango disease detection"
+    },
+    "citrus_canker_detection_model.pth": {
+      "version": "1.0",
+      "architecture": "ResNet50",
+      "description": "Citrus canker disease detection",
+      "storage_path": "models/citrus_canker_detection_model.pth",
+      "notes": "Trained for grapefruit/orange disease detection"
+    },
+    "citrus_blackspot_detection_model.pth": {
+      "version": "1.0",
+      "architecture": "DenseNet121",
+      "description": "Citrus black spot disease detection",
+      "storage_path": "models/citrus_blackspot_detection_model.pth",
+      "notes": "Trained for orange disease detection"
+    },
+    "guava_fruitfly_detection_model.pth": {
+      "version": "1.0",
+      "architecture": "ResNet50",
+      "description": "Guava fruitfly infestation detection",
+      "storage_path": "models/guava_fruitfly_detection_model.pth",
+      "notes": "Trained for guava disease detection"
+    }
+  }
+}
