@@ -1,6 +1,6 @@
 # FRESH ML - Fruit Detection and Classification API
 
-Professional REST API for fruit detection and ripeness classification using YOLO v8 and ResNet50 models.
+Professional REST API for fruit detection and ripeness classification using YOLOv11s and ResNet50 models.
 
 ## Overview
 
@@ -35,7 +35,7 @@ FRESH ML provides automated fruit detection and ripeness classification capabili
 
 4. **Verify model files**
    Ensure the following models exist in the `models/` directory:
-   - `yolo_detection_best.pt` (6MB)
+   - `yolov11s_best.pt` (19.2MB) - YOLOv11s fruit detection model
    - `classification_best_fixed.pth` (94MB) - Updated model with correct class mappings
 
 ## Running the API
@@ -73,12 +73,20 @@ GET http://127.0.0.1:8000/api/health
 
 ## Model Performance
 
-### Object Detection Model (YOLO v8 Nano)
-- **Model Size**: 6MB
-- **Classes**: 4 (mango, orange, guava, grapefruit)
-- **mAP@0.5**: 97.56%
+### Object Detection Model (YOLOv11s)
+- **Model Size**: 19.2MB
+- **Parameters**: 9.4M
+- **Classes**: 4 (grapefruit, guava, mango, orange)
+- **mAP@0.5**: 79.1%
+- **mAP@0.5:0.95**: 55.4%
+- **Per-Class mAP@0.5**:
+  - Mango: 96.7%
+  - Grapefruit: 78.0%
+  - Orange: 76.4%
+  - Guava: 65.2%
+- **Training**: 147 epochs planned, early stopped at 122
 - **Processing Speed**: ~50ms per image
-- **Input Size**: 640×640 pixels
+- **Input Size**: 512×512 pixels
 
 ### Classification Model (ResNet50)
 - **Model Size**: 94MB

@@ -25,14 +25,14 @@ class PipelineConfig:
             sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
             from pipeline.utils.do_spaces_model_manager import get_model_path
             
-            model_path = get_model_path("yolo_detection_best.pt")
+            model_path = get_model_path("yolov11s_best.pt")
             if model_path and os.path.exists(model_path):
                 return model_path
         except Exception as e:
             pass  # Silently fail, will try local
         
         # Fallback to local
-        local_path = "models/yolo_detection_best.pt"
+        local_path = "models/yolov11s_best.pt"
         if os.path.exists(local_path):
             return local_path
         
