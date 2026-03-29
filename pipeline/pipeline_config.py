@@ -235,3 +235,49 @@ class PipelineConfig:
         # At least one model must exist
         models_found = [yolo_exists, classification_exists, anthracnose_exists, citrus_canker_exists, blackspot_exists, fruitfly_exists]
         return any(models_found)
+    
+    # ==================== YIELD PREDICTION CONFIGURATION ====================
+    
+    @property
+    def YIELD_MODEL_PATH(self) -> str:
+        """Get yield prediction model path"""
+        try:
+            import sys
+            import os
+            sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+            from pipeline.utils.do_spaces_model_manager import get_model_path
+            
+            model_path = get_model_path("yield_model.joblib")
+            if model_path and os.path.exists(model_path):
+                return model_path
+        except Exception:
+            pass
+        
+        # Fallback to local
+        local_path = "models/yield_model.joblib"
+        if os.path.exists(local_path):
+            return local_path
+        
+        return None  # Model optional on startup
+    
+    # Yield prediction defaults
+    YIELD_DEFAULT_SAMPLING_PATTERN: str = "w-shaped"  # or "zigzag"
+    YIELD_MIN_CONFIDENCE: float = 0.6
+    YIELD_CACHE_DURATION_HOURS: int = 24
+    YIELD_MIN_DETECTIONS_FOR_PREDICTION: int = 5
+    
+    # Regional yield averages (kg/hectare) - Pakistan only
+    REGIONAL_YIELD_AVERAGES: Dict[str, float] = field(default_factory=lambda: {
+        "mango": 8500,
+        "orange": 32000,
+        "guava": 22000,
+        "grapefruit": 28000,
+    })
+    
+    # Default fruit weights (kg) for yield conversion
+    FRUIT_WEIGHTS: Dict[str, float] = field(default_factory=lambda: {
+        "mango": 0.25,
+        "orange": 0.18,
+        "guava": 0.18,
+        "grapefruit": 0.35,
+    })

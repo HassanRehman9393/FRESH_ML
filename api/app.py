@@ -27,6 +27,17 @@ from contextlib import asynccontextmanager
 from pipeline.predictor import FreshMLPredictor
 from pipeline.pipeline_config import PipelineConfig
 
+# Import yield prediction modules
+from pipeline.yield_prediction import (
+    FeatureAggregator,
+    SamplingPatternGenerator,
+    YieldPredictorModel,
+    HistoricalBaselineRegistry,
+    DetectionAggregation,
+    WeatherAggregation,
+    YieldBaseline
+)
+
 # Import schemas
 from api.schemas.models import (
     FruitDetectionRequest,
@@ -67,11 +78,17 @@ logger = logging.getLogger(__name__)
 predictor = None
 batch_tasks: Dict[str, Dict[str, Any]] = {}
 
+# Yield prediction system components
+baseline_registry = None
+feature_aggregator = None
+sampling_generator = None
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup and shutdown"""
     # Startup
     global predictor
+    global baseline_registry, feature_aggregator, sampling_generator
     try:
         logger.info("🚀 Starting FRESH ML API...")
         logger.info("📋 Loading ML models...")
@@ -83,6 +100,13 @@ async def lifespan(app: FastAPI):
         
         predictor = FreshMLPredictor(config)
         logger.info("✅ FRESH ML Pipeline initialized successfully!")
+        
+        # Initialize yield prediction components
+        logger.info("🌾 Initializing yield prediction system...")
+        baseline_registry = HistoricalBaselineRegistry()
+        feature_aggregator = FeatureAggregator()
+        sampling_generator = SamplingPatternGenerator()
+        logger.info("✅ Yield prediction system initialized!")
         
     except Exception as e:
         logger.error(f"❌ Failed to initialize pipeline: {str(e)}")
@@ -1163,6 +1187,234 @@ async def process_batch_images(task_id: str, request: FruitDetectionRequest):
         logger.error(f"❌ Batch processing failed: {task_id} - {str(e)}")
         batch_tasks[task_id]["status"] = BatchProcessingStatus.FAILED
         batch_tasks[task_id]["error_message"] = str(e)
+
+
+# ==================== YIELD PREDICTION ENDPOINTS ====================
+
+@app.post("/api/yield/predict")
+async def predict_yield(request: Dict[str, Any]):
+    """
+    Predict yield for an orchard based on aggregated detection and weather data.
+    
+    Request payload should include:
+    {
+        "detection_aggregates": {
+            "total_fruits": int,
+            "ripe_percentage": float,
+            "unripe_percentage": float,
+            "overripe_percentage": float,
+            "disease_percentage": float,
+            "average_confidence": float,
+            "coverage_score": float,
+            "detection_count": int
+        },
+        "weather_data": {
+            "temperature_avg": float,
+            "rainfall_sum": float,
+            "humidity_avg": float
+        },
+        "orchard_metadata": {
+            "area_hectares": float,
+            "fruit_types": ["mango"],
+            "days_since_planting": int
+        }
+    }
+    """
+    try:
+        logger.info("🌾 Starting yield prediction...")
+        
+        # Check if yield system is initialized
+        if not baseline_registry or not feature_aggregator or not sampling_generator:
+            raise RuntimeError("Yield prediction system not initialized. Check server startup.")
+        
+        # Extract data
+        detection_data = request.get('detection_aggregates', {})
+        weather_data = request.get('weather_data', {})
+        orchard_data = request.get('orchard_metadata', {})
+        
+        # Validate required fields
+        if not detection_data or not orchard_data:
+            raise ValueError("Missing detection_aggregates or orchard_metadata")
+        
+        area_hectares = orchard_data.get('area_hectares', 1)
+        fruit_types = orchard_data.get('fruit_types', ['default'])
+        days_since_planting = orchard_data.get('days_since_planting', 180)
+        
+        primary_fruit = fruit_types[0] if fruit_types else 'default'
+        
+        # Create aggregation objects
+        detections = DetectionAggregation(
+            total_fruits=detection_data.get('total_fruits', 0),
+            ripe_percentage=detection_data.get('ripe_percentage', 30),
+            unripe_percentage=detection_data.get('unripe_percentage', 60),
+            overripe_percentage=detection_data.get('overripe_percentage', 10),
+            disease_percentage=detection_data.get('disease_percentage', 5),
+            health_score=1.0 - (detection_data.get('disease_percentage', 5) / 100 * 0.4),
+            average_confidence=detection_data.get('average_confidence', 0.7),
+            coverage_score=detection_data.get('coverage_score', 0.5),
+            aggregation_period_days=30,
+            detection_count=detection_data.get('detection_count', 0)
+        )
+        
+        weather = WeatherAggregation(
+            temp_avg=weather_data.get('temperature_avg', 25),
+            temp_min=weather_data.get('temperature_min', 20),
+            temp_max=weather_data.get('temperature_max', 32),
+            rainfall_sum=weather_data.get('rainfall_sum', 150),
+            humidity_avg=weather_data.get('humidity_avg', 70),
+            humidity_min=weather_data.get('humidity_min', 50),
+            humidity_max=weather_data.get('humidity_max', 90),
+            aggregation_period_days=30,
+            data_points=weather_data.get('data_points', 30)
+        )
+        
+        # Feature aggregation
+        features = feature_aggregator.normalize_features(
+            detections=detections,
+            weather=weather,
+            orchard_area_hectares=area_hectares,
+            days_since_planting=days_since_planting
+        )
+        
+        logger.info(f"✅ Features aggregated: {list(features.keys())}")
+        
+        # Sampling pattern extrapolation
+        config = PipelineConfig()
+        
+        # Calculate sample area (estimate from number of detections)
+        # Assume ~5000m² per image/detection
+        sample_area_m2 = detections.detection_count * 5000
+        total_area_m2 = area_hectares * 10000
+        
+        sampling_result = sampling_generator.extrapolate_w_shaped(
+            detected_fruit_count=detections.total_fruits,
+            sample_area_m2=max(sample_area_m2, 1),
+            total_area_m2=total_area_m2,
+            fruit_type=primary_fruit,
+            consistency_factor=0.85
+        )
+        
+        logger.info(f"📊 Sampling result: {sampling_result.extrapolated_fruit_count} fruits "
+                   f"(factor: {sampling_result.sampling_factor:.2f}, confidence: {sampling_result.confidence:.2f})")
+        
+        # Convert to yield
+        yield_kg, weight_confidence = sampling_generator.convert_to_yield_kg(
+            fruit_count=sampling_result.extrapolated_fruit_count,
+            fruit_type=primary_fruit
+        )
+        
+        logger.info(f"🎯 Converted to yield: {yield_kg:.0f}kg (confidence: {weight_confidence:.2f})")
+        
+        # ML Model prediction
+        predictor_model = YieldPredictorModel()
+        
+        # Try to load trained model if available
+        yield_model_path = config.YIELD_MODEL_PATH
+        if yield_model_path and os.path.exists(yield_model_path):
+            predictor_model.load_model(yield_model_path)
+            logger.info(f"✅ Loaded trained yield model: {yield_model_path}")
+        
+        # Get prediction
+        prediction_result = predictor_model.predict(
+            features=features,
+            extrapolated_fruit_count=sampling_result.extrapolated_fruit_count,
+            orchard_area_hectares=area_hectares,
+            fruit_type=primary_fruit
+        )
+        
+        logger.info(f"🌾 Yield prediction: {prediction_result.predicted_yield_kg:.0f}kg "
+                   f"(confidence: {prediction_result.confidence:.2f})")
+        
+        # Get baseline for comparison (using global registry initialized at startup)
+        regional_baseline = baseline_registry.get_regional_yield(primary_fruit, region='pakistan')
+        
+        # Prepare response
+        response = {
+            "success": True,
+            "prediction": {
+                "predicted_yield_kg": round(prediction_result.predicted_yield_kg, 2),
+                "confidence": round(prediction_result.confidence, 2),
+                "confidence_interval": {
+                    "lower_bound": round(prediction_result.confidence_lower_bound, 2),
+                    "upper_bound": round(prediction_result.confidence_upper_bound, 2)
+                },
+                "contributing_factors": {
+                    "health_score": round(prediction_result.contributing_factors.get('health_score', 0.5), 2),
+                    "weather_favorability": round(prediction_result.contributing_factors.get('weather_favorability', 0.5), 2),
+                    "ripeness_condition": round(prediction_result.contributing_factors.get('ripeness_condition', 0.3), 2),
+                    "disease_impact": round(prediction_result.contributing_factors.get('disease_impact', 0.7), 2),
+                    "data_coverage": round(prediction_result.contributing_factors.get('data_coverage', 0.5), 2)
+                },
+                "trend_direction": prediction_result.trend_direction,
+                "model_used": prediction_result.model_used
+            },
+            "sampling": {
+                "extrapolated_fruit_count": sampling_result.extrapolated_fruit_count,
+                "sampling_factor": round(sampling_result.sampling_factor, 2),
+                "pattern_used": sampling_result.pattern_used,
+                "sample_coverage_percent": round(sampling_result.sample_coverage_percent, 2),
+                "sampling_confidence": round(sampling_result.confidence, 2)
+            },
+            "baseline": {
+                "regional_yield_kg_per_hectare": regional_baseline.yield_per_hectare_kg if regional_baseline else None,
+                "regional_std_dev": regional_baseline.yield_std_dev_kg if regional_baseline else None
+            },
+            "metadata": {
+                "fruit_type": primary_fruit,
+                "orchard_area_hectares": area_hectares,
+                "aggregation_period_days": 30,
+                "timestamp": datetime.now().isoformat()
+            }
+        }
+        
+        logger.info("✅ Yield prediction completed successfully")
+        return response
+        
+    except Exception as e:
+        logger.error(f"❌ Yield prediction failed: {str(e)}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": str(e),
+                "prediction": None
+            }
+        )
+
+
+@app.get("/api/yield/models")
+async def list_yield_models():
+    """List available yield prediction models"""
+    try:
+        config = PipelineConfig()
+        model_path = config.YIELD_MODEL_PATH
+        
+        models = []
+        if model_path and os.path.exists(model_path):
+            models.append({
+                "name": "yield_model",
+                "path": model_path,
+                "type": "xgboost",
+                "available": True
+            })
+        else:
+            models.append({
+                "name": "yield_model",
+                "path": model_path,
+                "type": "xgboost",
+                "available": False,
+                "status": "Using baseline estimation"
+            })
+        
+        return {
+            "success": True,
+            "models": models,
+            "default_model": "yield_model"
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to list yield models: {str(e)}")
+        return {"success": False, "error": str(e)}
 
 if __name__ == "__main__":
     import argparse

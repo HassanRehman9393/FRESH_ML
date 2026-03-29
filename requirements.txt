@@ -23,3 +23,6 @@ python-dotenv
 
 # Data validation  
 pydantic
+
+# Model serialization & ML utilities
+joblib
