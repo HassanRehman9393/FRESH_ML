@@ -159,19 +159,9 @@ class YOLODetector:
         
         for detection in detections:
             x, y, w, h = detection['bbox']
-            fruit_type = detection['fruit_type']
-            confidence = detection['confidence']
             
             # Draw bounding box
             cv2.rectangle(annotated_image, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            
-            # Add label
-            label = f"{fruit_type}: {confidence:.2f}"
-            label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)[0]
-            cv2.rectangle(annotated_image, (x, y - label_size[1] - 10), 
-                         (x + label_size[0], y), (0, 255, 0), -1)
-            cv2.putText(annotated_image, label, (x, y - 5), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
         
         # Save if path provided
         if save_path:

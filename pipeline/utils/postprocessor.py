@@ -260,7 +260,7 @@ class ResultPostProcessor:
             save_path: Optional path to save visualization
             
         Returns:
-            Annotated image with bounding boxes and labels
+            Annotated image with bounding boxes only
         """
         try:
             # Create copy for annotation
@@ -279,8 +279,6 @@ class ResultPostProcessor:
                 try:
                     # Get data
                     fruit_type = result.get('fruit_type', 'unknown')
-                    ripeness = result.get('ripeness_level', 'unknown')
-                    confidence = result.get('confidence', 0.0)
                     bbox = result.get('bbox', [0, 0, 0, 0])
                     
                     if len(bbox) < 4:
@@ -292,44 +290,9 @@ class ResultPostProcessor:
                     # Draw bounding box
                     cv2.rectangle(annotated, (x, y), (x + w, y + h), color, 2)
                     
-                    # Create label
-                    label = f"{fruit_type}: {ripeness}"
-                    conf_label = f"Conf: {confidence:.2f}"
-                    
-                    # Calculate text size
-                    font = cv2.FONT_HERSHEY_SIMPLEX
-                    font_scale = 0.6
-                    thickness = 2
-                    
-                    (label_w, label_h), _ = cv2.getTextSize(label, font, font_scale, thickness)
-                    (conf_w, conf_h), _ = cv2.getTextSize(conf_label, font, font_scale, thickness)
-                    
-                    # Draw label background
-                    label_bg_h = label_h + conf_h + 15
-                    label_bg_w = max(label_w, conf_w) + 10
-                    
-                    cv2.rectangle(annotated, 
-                                (x, y - label_bg_h - 5), 
-                                (x + label_bg_w, y), 
-                                color, -1)
-                    
-                    # Draw text
-                    cv2.putText(annotated, label, 
-                              (x + 5, y - conf_h - 10), 
-                              font, font_scale, (0, 0, 0), thickness)
-                    
-                    cv2.putText(annotated, conf_label, 
-                              (x + 5, y - 5), 
-                              font, font_scale, (0, 0, 0), thickness)
-                    
                 except Exception as e:
                     logger.error(f"Error annotating result: {str(e)}")
                     continue
-            
-            # Add summary text
-            summary_text = f"Detected: {len(results)} fruits"
-            cv2.putText(annotated, summary_text, (10, 30), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
             
             # Save if path provided
             if save_path:
