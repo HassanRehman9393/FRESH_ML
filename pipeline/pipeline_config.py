@@ -15,140 +15,36 @@ from typing import List, Tuple, Dict, Any
 class PipelineConfig:
     """Configuration class for FRESH ML pipeline"""
     
-    # Model paths - now dynamically loaded from Digital Ocean Spaces
+    # Model paths - loaded from local models/ directory
     @property
     def YOLO_MODEL_PATH(self) -> str:
-        """Get YOLO model path from DO Spaces"""
-        try:
-            import sys
-            import os
-            sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-            from pipeline.utils.do_spaces_model_manager import get_model_path
-            
-            model_path = get_model_path("yolov11s_best.pt")
-            if model_path and os.path.exists(model_path):
-                return model_path
-        except Exception as e:
-            pass  # Silently fail, will try local
-        
-        # Fallback to local
         local_path = "models/yolov11s_best.pt"
-        if os.path.exists(local_path):
-            return local_path
-        
-        # Return None instead of raising error (optional model)
-        return None
-    
+        return local_path if os.path.exists(local_path) else None
+
     @property
     def CLASSIFICATION_MODEL_PATH(self) -> str:
-        """Get classification model path from DO Spaces"""
-        try:
-            import sys
-            import os
-            sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-            from pipeline.utils.do_spaces_model_manager import get_model_path
-            
-            model_path = get_model_path("classification_best_fixed.pth")
-            if model_path and os.path.exists(model_path):
-                return model_path
-        except Exception as e:
-            pass  # Silently fail, will try local
-        
-        # Fallback to local
         local_path = "models/classification_best_fixed.pth"
-        if os.path.exists(local_path):
-            return local_path
-        
-        # Return None instead of raising error (optional model)
-        return None
-    
+        return local_path if os.path.exists(local_path) else None
+
     @property
     def ANTHRACNOSE_MODEL_PATH(self) -> str:
-        """Get Anthracnose disease detection model path from DO Spaces"""
-        try:
-            import sys
-            import os
-            sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-            from pipeline.utils.do_spaces_model_manager import get_model_path
-            
-            model_path = get_model_path("anthracnose_detection_model.pth")
-            if model_path and os.path.exists(model_path):
-                return model_path
-        except Exception as e:
-            print(f"⚠️  Failed to get Anthracnose model from DO Spaces: {e}")
-        
-        # Fallback to local
         local_path = "models/anthracnose_detection_model.pth"
-        if os.path.exists(local_path):
-            return local_path
-        
-        return None  # Optional model
-    
+        return local_path if os.path.exists(local_path) else None
+
     @property
     def CITRUS_CANKER_MODEL_PATH(self) -> str:
-        """Get Citrus Canker disease detection model path from DO Spaces"""
-        try:
-            import sys
-            import os
-            sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-            from pipeline.utils.do_spaces_model_manager import get_model_path
-            
-            model_path = get_model_path("citrus_canker_detection_model.pth")
-            if model_path and os.path.exists(model_path):
-                return model_path
-        except Exception as e:
-            print(f"⚠️  Failed to get Citrus Canker model from DO Spaces: {e}")
-        
-        # Fallback to local
         local_path = "models/citrus_canker_detection_model.pth"
-        if os.path.exists(local_path):
-            return local_path
-        
-        return None  # Optional model
-    
+        return local_path if os.path.exists(local_path) else None
+
     @property
     def BLACKSPOT_MODEL_PATH(self) -> str:
-        """Get Citrus Blackspot disease detection model path from DO Spaces"""
-        try:
-            import sys
-            import os
-            sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-            from pipeline.utils.do_spaces_model_manager import get_model_path
-            
-            model_path = get_model_path("citrus_blackspot_detection_model.pth")
-            if model_path and os.path.exists(model_path):
-                return model_path
-        except Exception as e:
-            print(f"⚠️  Failed to get Citrus Blackspot model from DO Spaces: {e}")
-        
-        # Fallback to local
         local_path = "models/citrus_blackspot_detection_model.pth"
-        if os.path.exists(local_path):
-            return local_path
-        
-        return None  # Optional model
-    
+        return local_path if os.path.exists(local_path) else None
+
     @property
     def GUAVA_FRUITFLY_MODEL_PATH(self) -> str:
-        """Get guava fruitfly model path from DO Spaces"""
-        try:
-            import sys
-            import os
-            sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-            from pipeline.utils.do_spaces_model_manager import get_model_path
-            
-            model_path = get_model_path("guava_fruitfly_detection_model.pth")
-            if model_path and os.path.exists(model_path):
-                return model_path
-        except Exception as e:
-            print(f"⚠️  Failed to get Guava Fruitfly model from DO Spaces: {e}")
-        
-        # Fallback to local
         local_path = "models/guava_fruitfly_detection_model.pth"
-        if os.path.exists(local_path):
-            return local_path
-        
-        return None  # Optional model
+        return local_path if os.path.exists(local_path) else None
     
     # Image processing
     YOLO_INPUT_SIZE: Tuple[int, int] = (640, 640)
@@ -240,25 +136,8 @@ class PipelineConfig:
     
     @property
     def YIELD_MODEL_PATH(self) -> str:
-        """Get yield prediction model path"""
-        try:
-            import sys
-            import os
-            sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-            from pipeline.utils.do_spaces_model_manager import get_model_path
-            
-            model_path = get_model_path("yield_model.joblib")
-            if model_path and os.path.exists(model_path):
-                return model_path
-        except Exception:
-            pass
-        
-        # Fallback to local
         local_path = "models/yield_model.joblib"
-        if os.path.exists(local_path):
-            return local_path
-        
-        return None  # Model optional on startup
+        return local_path if os.path.exists(local_path) else None
     
     # Yield prediction defaults
     YIELD_DEFAULT_SAMPLING_PATTERN: str = "w-shaped"  # or "zigzag"
